@@ -1,0 +1,109 @@
+/* Navbar container */
+.navbar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%; /* Full width */
+    background-color: #ffffff;
+    border-bottom: 1px solid #eee;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    z-index: 1000;
+    padding: 1rem 2rem;
+  }
+  
+  .navbar-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  
+  /* Logo */
+  .navbar-logo .logo {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #333;
+    text-decoration: none;
+  }
+  
+  /* Centered Search Bar */
+  .navbar-search {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+  }
+  
+  .search-container {
+    position: relative;
+    width: 50%; /* Adjust width as needed */
+  }
+  
+  .search-input {
+    width: 50%;
+    padding: 0.75rem 2.5rem; /* Padding for the input */
+    border: 1px solid #ddd;
+    border-radius: 25px; /* Rounded edges */
+    font-size: 1rem;
+    outline: none;
+  }
+  
+  .search-icon {
+    position: absolute;
+    left: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #888;
+    font-size: 1rem;
+  }
+  
+  /* Navigation links */
+  .nav-links {
+    display: flex;
+    gap: 1rem;
+    transition: all 0.3s ease-in-out;
+  }
+  
+  .nav-links a {
+    text-decoration: none;
+    color: #333;
+    font-size: 1rem;
+    font-weight: 500;
+  }
+  
+  .nav-links a:hover {
+    color: #007bff;
+  }
+  
+  /* Hamburger menu */
+  .hamburger-menu {
+    display: none;
+  }
+  
+  @media (max-width: 768px) {
+    .nav-links {
+      display: none;
+      flex-direction: column;
+      position: absolute;
+      top: 70px; /* Below the fixed navbar */
+      right: 0;
+      background: #fff;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      border-radius: 8px;
+      width: 200px;
+      padding: 1rem;
+    }
+  
+    .nav-links.show {
+      display: flex;
+    }
+  
+    .hamburger-menu {
+      display: block;
+    }
+  
+    .navbar-search {
+      display: none; /* Hide search bar on mobile for simplicity */
+    }
+  }
+  
