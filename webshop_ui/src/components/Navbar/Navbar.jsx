@@ -6,6 +6,21 @@ import { FaSearch } from "react-icons/fa";
 
 const NavBar = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const [showDropdown, setShowDropdown] = useState(false);
+
+  // Sample category list
+  const categories = [
+    "Chairs",
+    "Tables",
+    "Sofas",
+    "Beds",
+    "Wardrobes",
+    "Bookshelves",
+    "Outdoor Furniture",
+    "Dining Sets",
+    "Office Furniture",
+    "Kids' Furniture",
+  ];
 
   return (
     <header className="navbar">
@@ -39,13 +54,28 @@ const NavBar = () => {
           <Link to="/shop" className="nav-item" onClick={() => setIsOpen(false)}>
             Shop
           </Link>
-          <Link
-            to="/categories"
-            className="nav-item"
-            onClick={() => setIsOpen(false)}
+          <div
+            className="nav-item dropdown"
+            onMouseEnter={() => setShowDropdown(true)}
+            onMouseLeave={() => setShowDropdown(false)}
           >
-            Categories
-          </Link>
+            <span className="dropdown-label">Categories</span>
+            {showDropdown && (
+              <ul className="dropdown-menu">
+                {categories.map((category, index) => (
+                  <li key={index} className="dropdown-item">
+                    <Link
+                      to={`/categories/${category.toLowerCase().replace(/ /g, "-")}`}
+                      className="nav-item"
+                      onClick={() => setIsOpen(false)}
+                    >
+                      {category}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
           <Link
             to="/about"
             className="nav-item"
