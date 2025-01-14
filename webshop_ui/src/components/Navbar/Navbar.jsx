@@ -12,14 +12,9 @@ const NavBar = () => {
   const categories = [
     "Chairs",
     "Tables",
-    "Sofas",
     "Beds",
     "Wardrobes",
     "Bookshelves",
-    "Outdoor Furniture",
-    "Dining Sets",
-    "Office Furniture",
-    "Kids' Furniture",
   ];
 
   return (
