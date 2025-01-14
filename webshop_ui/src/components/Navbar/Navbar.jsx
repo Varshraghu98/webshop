@@ -89,10 +89,10 @@ const NavBar = () => {
             {showContactsDropdown && (
               <ul className="dropdown-menu">
                 <li className="dropdown-item">
-                  <span>Email: <a href="mailto:support@furnitureshop.com">support@furnitureshop.com</a></span>
+                  <span><a href="mailto:support@furnitureshop.com">support@furnitureshop.com</a></span>
                 </li>
                 <li className="dropdown-item">
-                  <span>Phone: <a href="tel:+491234567">+49 123-4567</a></span>
+                  <span><a href="tel:+491234567">+49 123-4567</a></span>
                 </li>
               </ul>
             )}

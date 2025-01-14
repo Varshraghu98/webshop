@@ -162,9 +162,4 @@
 .dropdown-item a:hover {
   color: #007bff;
 }
-
-.dropdown-item span.dropdown-label {
-  font-weight: bold;
-  /*margin-right: 0.5rem; *//* Add spacing between label and contact info */
-}
   
