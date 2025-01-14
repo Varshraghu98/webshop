@@ -189,7 +189,8 @@ def get_inventory():
 
 #Utility methods for checkInventory()
 
-
+#This method is  not used at present can be used in future probably by order management
+#For chekcing inventory status before placing order.
 def check_inventory(product_id):
     try:
         # Query the Inventory table for the specified product ID
