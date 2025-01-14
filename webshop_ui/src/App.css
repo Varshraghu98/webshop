@@ -1,0 +1,17 @@
+/* Parent container for the app */
+.app-container {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+  }
+  
+  header, footer {
+    width: 100%;
+  }
+  
+  main {
+    flex: 1;
+    width: 100%;
+    padding-top: 70px; /* Match the height of the fixed navbar */
+  }
+  

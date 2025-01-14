@@ -1,15 +1,19 @@
 /* Navbar container */
 .navbar {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%; /* Full width */
-    background-color: #ffffff;
-    border-bottom: 1px solid #eee;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    z-index: 1000;
-    padding: 1rem 2rem;
-  }
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%; /* Full width */
+  height: 70px; /* Define height explicitly */
+  background-color: #ffffff;
+  border-bottom: 1px solid #eee;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+  padding: 0 2rem;
+  display: flex;
+  align-items: center;
+}
+
   
   .navbar-content {
     display: flex;
