@@ -1,3 +1,5 @@
+from datetime import datetime
+
 import boto3
 import uuid
 from flask import Flask, request, jsonify
@@ -23,7 +25,7 @@ class Product(db.Model):
     __tablename__ = 'product'  # Explicitly specify the existing table name
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     category = db.Column(db.String(100), nullable=False)
-    image = db.Column(db.String(255), nullable=False)  # Image URL from S3
+    image = db.Column(db.LargeBinary, nullable=False)  #Store image as binary data
     name = db.Column(db.String(100), nullable=False)
     description = db.Column(db.Text, nullable=False)
     price = db.Column(db.Float, nullable=False)
@@ -37,20 +39,26 @@ class Inventory(db.Model):
     # Relationship to Product
     product = db.relationship('Product', backref=db.backref('inventory', uselist=False))
 
+class Cart(db.Model):
+    __tablename__ = 'cart'  # Specify the table name explicitly
 
-# AWS S3 Configuration
-S3_BUCKET = 'your-s3-bucket-name'
-S3_REGION = 'your-region'  # e.g., 'us-east-1'
-S3_ACCESS_KEY = 'your-access-key'
-S3_SECRET_KEY = 'your-secret-key'
+    # Primary Key: Unique ID for each cart item
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
 
-# Initialize boto3 client
-s3_client = boto3.client(
-    's3',
-    aws_access_key_id=S3_ACCESS_KEY,
-    aws_secret_access_key=S3_SECRET_KEY,
-    region_name=S3_REGION
-)
+    # Foreign Key: Relates to the product table
+    product_id = db.Column(db.Integer, db.ForeignKey('product.id'), nullable=False)
+
+    # Quantity: The number of items of the product in the cart
+    quantity = db.Column(db.Integer, nullable=False, default=1)
+
+    # Relationship with Product: Each cart item is associated with one product
+    product = db.relationship('Product', backref=db.backref('cart', uselist=False))
+
+    # Timestamp to record when the cart item was added or modified
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
 
 @app.route('/products', methods=['POST'])
 def create_product():
@@ -61,22 +69,13 @@ def create_product():
         return jsonify({"error": "Image file is required"}), 400
 
     try:
-        # Generate a unique filename and upload to S3
-        filename = f"{uuid.uuid4().hex}_{secure_filename(file.filename)}"
-        s3_client.upload_fileobj(
-            file,
-            S3_BUCKET,
-            filename,
-            ExtraArgs={"ContentType": file.content_type, "ACL": "public-read"}  # Make the file publicly readable
-        )
-
-        # Construct the file URL
-        file_url = f"https://{S3_BUCKET}.s3.{S3_REGION}.amazonaws.com/{filename}"
+        # Read the file's binary data
+        image_data = file.read()
 
         # Create a new product record
         new_product = Product(
             category=data['category'],
-            image=file_url,  # Store only the S3 URL in the database
+            image=image_data,  # Store binary data in the database
             name=data['name'],
             description=data['description'],
             price=float(data['price']),
@@ -88,7 +87,6 @@ def create_product():
 
         return jsonify({"message": "Product created successfully", "product": {
             "category": data['category'],
-            "image": file_url,
             "name": data['name'],
             "description": data['description'],
             "price": data['price'],
@@ -98,6 +96,9 @@ def create_product():
         db.session.rollback()
         return jsonify({"error": str(e)}), 400
 
+import base64
+from flask import Flask, request, jsonify
+from io import BytesIO
 
 @app.route('/products', methods=['GET'])
 def get_products():
@@ -110,17 +111,21 @@ def get_products():
     products = Product.query.all()
 
     # Filter products based on inventory quantity
-    product_list = [
-        {
-            "id": product.id,
-            "category": product.category,
-            "image": product.image,
-            "name": product.name,
-            "description": product.description,
-            "price": product.price
-        }
-        for product in products if check_inventory(product.id) > 0
-    ]
+    product_list = []
+    for product in products:
+        if check_inventory(product.id) > 0:
+            # Convert the binary image data to base64 string
+            image_base64 = base64.b64encode(product.image).decode('utf-8')  # Convert to base64 and decode as UTF-8
+
+            product_data = {
+                "id": product.id,
+                "category": product.category,
+                "image": image_base64,  # Return image as base64 string
+                "name": product.name,
+                "description": product.description,
+                "price": product.price
+            }
+            product_list.append(product_data)
 
     return jsonify(product_list), 200
 
@@ -186,6 +191,70 @@ def get_inventory():
     ]
 
     return jsonify(inventory_list), 200
+
+@app.route('/cart', methods=['POST'])
+def add_to_cart():
+    data = request.json  # Receive product_id and quantity in the request body
+    product_id = data.get('product_id')
+    quantity = data.get('quantity', 1)  # Default quantity is 1 if not provided
+
+    # Check if the product already exists in the cart
+    existing_cart_item = Cart.query.filter_by(product_id=product_id).first()
+
+    if existing_cart_item:
+        # If product is already in the cart, update the quantity
+        existing_cart_item.quantity += quantity
+    else:
+        # If product is not in the cart, add it
+        new_cart_item = Cart(
+            product_id=product_id,
+            quantity=quantity
+        )
+        db.session.add(new_cart_item)
+
+    try:
+        db.session.commit()
+        return jsonify({"message": "Item added to cart"}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 400
+
+
+import base64
+
+
+@app.route('/cart', methods=['GET'])
+def get_cart_items():
+    try:
+        # Fetch all cart items (with product details)
+        cart_items = Cart.query.all()
+
+        # Prepare the response
+        cart_list = []
+        for cart_item in cart_items:
+            product = cart_item.product  # Get the associated product details
+
+            # Convert image (BLOB) to base64 string if it's stored as BLOB
+            if product.image:
+                image_base64 = base64.b64encode(product.image).decode('utf-8')
+            else:
+                image_base64 = None  # In case there's no image stored
+
+            cart_list.append({
+                "id": cart_item.id,
+                "product_id": cart_item.product_id,
+                "name": product.name,
+                "category": product.category,
+                "image": image_base64,  # Return base64-encoded image
+                "description": product.description,
+                "price": product.price,
+                "quantity": cart_item.quantity
+            })
+
+        return jsonify(cart_list), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
 
 #Utility methods for checkInventory()
 
