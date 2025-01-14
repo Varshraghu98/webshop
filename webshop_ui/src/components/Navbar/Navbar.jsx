@@ -7,19 +7,16 @@ import { FaSearch } from "react-icons/fa";
 const NavBar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
+  const [showContactsDropdown, setShowContactsDropdown] = useState(false);
+
 
   // Sample category list
   const categories = [
     "Chairs",
     "Tables",
-    "Sofas",
     "Beds",
     "Wardrobes",
     "Bookshelves",
-    "Outdoor Furniture",
-    "Dining Sets",
-    "Office Furniture",
-    "Kids' Furniture",
   ];
 
   return (
@@ -83,13 +80,24 @@ const NavBar = () => {
           >
             About Us
           </Link>
-          <Link
-            to="/contact"
-            className="nav-item"
-            onClick={() => setIsOpen(false)}
+          <div
+            className="nav-item dropdown"
+            onMouseEnter={() => setShowContactsDropdown(true)}
+            onMouseLeave={() => setShowContactsDropdown(false)}
           >
-            Contact
-          </Link>
+            <span className="dropdown-label">Contacts</span>
+            {showContactsDropdown && (
+              <ul className="dropdown-menu">
+                <li className="dropdown-item">
+                  <span><a href="mailto:support@furnitureshop.com">support@furnitureshop.com</a></span>
+                </li>
+                <li className="dropdown-item">
+                  <span><a href="tel:+491234567">+49 123-4567</a></span>
+                </li>
+              </ul>
+            )}
+          </div>
+
           <Link
             to="/cart"
             className="nav-item"

@@ -23,9 +23,9 @@ a:hover {
 }
 
 body {
-  margin: 0;
-  display: flex;
-  place-items: center;
+  margin-top: 2rem;
+  display: grid;
+  place-items: start;
   min-width: 320px;
   min-height: 100vh;
 }
@@ -66,3 +66,36 @@ button:focus-visible {
     background-color: #f9f9f9;
   }
 }
+
+.about-us {
+  padding: 3rem 2rem;
+  /*background-color: #f9f9f9; /* Light gray for a clean look*/
+  background-size: cover;
+  justify-content: center;
+}
+
+.about-us-content {
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.about-us h1 {
+  font-size: 1.5rem; /* Larger header */
+  font-weight: bold;
+  color: #2c3e50; /* Dark gray for professional look */
+  margin-bottom: 1.5rem;
+}
+
+.about-us p {
+  font-size: 1rem;
+  color: #4a4a4a;
+  line-height: 1.8;
+  margin-bottom: 1.5rem;
+}
+
+/* Add subtle spacing */
+main {
+  margin-top: 0.5rem;
+}
+
+
