@@ -64,13 +64,13 @@ const NavBar = () => {
               <ul className="dropdown-menu">
                 {categories.map((category, index) => (
                   <li key={index} className="dropdown-item">
-                    <Link
+          <Link
                       to={`/categories/${category.toLowerCase().replace(/ /g, "-")}`}
-                      className="nav-item"
-                      onClick={() => setIsOpen(false)}
-                    >
+            className="nav-item"
+            onClick={() => setIsOpen(false)}
+          >
                       {category}
-                    </Link>
+          </Link>
                   </li>
                 ))}
               </ul>
