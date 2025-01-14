@@ -10,7 +10,7 @@ def create_app():
     app = Flask(__name__)
 
     # Database configuration
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:newpassword@localhost:3306/webshop'
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:root@db:3306/webshop'
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
     return app

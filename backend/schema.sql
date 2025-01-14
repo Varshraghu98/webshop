@@ -15,3 +15,63 @@ CREATE TABLE Inventory (
  product_id INT NOT NULL UNIQUE,
  quantity INT NOT NULL DEFAULT 0,
  FOREIGN KEY (product_id) REFERENCES product(id) ON DELETE CASCADE ON UPDATE CASCADE);
+
+
+ INSERT INTO `webshop`.`product` (
+
+  `category`,
+  `image`,
+  `name`,
+  `description`,
+  `price`
+)VALUES
+  (
+
+    'chair',
+    'image',
+    'computer chair',
+    'description',
+    '12'
+  );
+
+  INSERT INTO `webshop`.`product` (
+
+  `category`,
+  `image`,
+  `name`,
+  `description`,
+  `price`
+)VALUES
+  (
+
+    'chair',
+    'image',
+    'kinder chair',
+    'description',
+    '15'
+  );
+
+  INSERT INTO `webshop`.`product` (
+
+  `category`,
+  `image`,
+  `name`,
+  `description`,
+  `price`
+)VALUES
+  (
+
+    'chair',
+    'image',
+    'some chair',
+    'description',
+    '32'
+  );
+
+
+INSERT INTO `webshop`.`Inventory` (`id`, `product_id`, `quantity`)
+VALUES (1, 1, 3);
+INSERT INTO `webshop`.`Inventory` (`id`, `product_id`, `quantity`)
+VALUES (2, 2, 2);
+INSERT INTO `webshop`.`Inventory` (`id`, `product_id`, `quantity`)
+VALUES (3, 3, 8);
