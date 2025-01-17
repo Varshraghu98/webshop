@@ -9,6 +9,7 @@ name VARCHAR(100) NOT NULL,
 description TEXT NOT NULL,
 price FLOAT NOT NULL );
 
+ALTER TABLE product MODIFY COLUMN image LONGBLOB;
 
 CREATE TABLE orders (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -95,3 +96,5 @@ INSERT INTO `webshop`.`Inventory` (`id`, `product_id`, `quantity`)
 VALUES (2, 2, 2);
 INSERT INTO `webshop`.`Inventory` (`id`, `product_id`, `quantity`)
 VALUES (3, 3, 8);
+
+
