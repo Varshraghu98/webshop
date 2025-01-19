@@ -4,17 +4,19 @@ import boto3
 import uuid
 from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
+from flask_cors import CORS
+import base64
 from werkzeug.utils import secure_filename
 
 
 # Initialize Flask app and SQLAlchemy
 def create_app():
     app = Flask(__name__)
-
+    CORS(app)
     # Database configuration
+
     # app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:root@db:3306/webshop'
     app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:root@localhost:3306/webshop'
-
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
     return app
@@ -220,9 +222,6 @@ def add_to_cart():
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 400
-
-
-import base64
 
 
 @app.route('/cart', methods=['GET'])
