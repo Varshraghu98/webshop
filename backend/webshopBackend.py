@@ -280,12 +280,12 @@ def check_inventory(product_id):
 import smtplib
 
 # Mailtrap configuration
-MAILTRAP_USERNAME = "2db85a1c423ae3"
-MAILTRAP_PASSWORD = "b07b7b670b19b5"
+MAILTRAP_USERNAME = "a738c74b91fd48"
+MAILTRAP_PASSWORD = "e045f2b6d77ed1"
 MAILTRAP_SERVER = "sandbox.smtp.mailtrap.io"
 MAILTRAP_PORT = 2525
 SENDER = "Test Sender <info@webshop.com>"
-RECEIVER = "Test Receiver <buyer@gmail.com>"
+RECEIVER = "Test Receiver <testwebshop123@gmail.com>"
 
 
 # Function to send email
