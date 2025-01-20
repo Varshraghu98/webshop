@@ -166,4 +166,107 @@
 .dropdown-item a:hover {
   color: #007bff;
 }
-  
+
+
+/* General Page Layout */
+.product-page {
+  font-family: 'Roboto', sans-serif;
+  color: #333;
+  padding: 70px;
+  max-width: auto;
+  margin: 0 auto;
+  background-color: #f9f9f9;
+}
+
+/* Responsive Grid Layout */
+.product-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 1fr;
+   /* Default layout for larger screens */
+  gap: 20px;
+  padding: 20px;
+  max-width: 100%;
+}
+
+/* Breakpoints for smaller screens */
+@media (max-width: 1024px) {
+  .product-grid {
+    grid-template-columns: 1fr 1fr; /* Two columns for tablets */
+  }
+}
+
+@media (max-width: 768px) {
+  .product-grid {
+    grid-template-columns: 1fr; /* Single column for mobile devices */
+  }
+}
+
+/* Product Tile Styling */
+.product-tile {
+  border-radius: 10px;
+  overflow: hidden;
+  background-color: #fff;
+  box-shadow: 0 4px 6px rgba(116, 93, 93, 0.1);
+  transition: transform 0.3s, box-shadow 0.3s;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.product-tile img {
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+  border-bottom: 1px solid #ddd;
+}
+
+.product-tile h3 {
+  margin: 15px;
+  font-size: 18px;
+  color: #0073e6;
+  font-weight: 500;
+  text-transform: uppercase;
+  transition: color 0.3s;
+}
+
+.product-tile .price {
+  font-size: 20px;
+  font-weight: bold;
+  color: #28a745;
+  margin: 0 15px;
+}
+
+.product-tile p {
+  margin: 10px 15px;
+  font-size: 14px;
+  color: #555;
+  line-height: 1.6;
+}
+
+/* Button Styling */
+.product-tile .view-product {
+  margin: 15px;
+  padding: 10px 15px;
+  background-color: #0073e6;
+  color: #fff;
+  text-align: center;
+  border-radius: 5px;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 14px;
+  transition: background-color 0.3s;
+}
+
+.product-tile .view-product:hover {
+  background-color: #005bb5;
+}
+
+/* Hover Effect */
+.product-tile:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 6px 10px rgba(0, 0, 0, 0.2);
+}
+
+.product-tile:hover h3 {
+  color: #005bb5;
+}

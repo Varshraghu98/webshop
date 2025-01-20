@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import Hamburger from "hamburger-react";
-import "./NavBar.css";
+import "./Navbar.css";
 import { FaSearch } from "react-icons/fa"; 
 
 const NavBar = () => {
