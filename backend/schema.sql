@@ -13,10 +13,16 @@ ALTER TABLE product MODIFY COLUMN image LONGBLOB;
 
 CREATE TABLE orders (
     id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
     status VARCHAR(50) NOT NULL,
+    email VARCHAR(100) NOT NULL,
     payment_method VARCHAR(50) NOT NULL,
     total_price FLOAT NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    street VARCHAR(200) NOT NULL,
+    city VARCHAR(100) NOT NULL,
+    country VARCHAR(100) NOT NULL,
+    pincode VARCHAR(20) NOT NULL
 );
 
 CREATE TABLE order_details (
@@ -28,6 +34,13 @@ CREATE TABLE order_details (
     FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
     FOREIGN KEY (product_id) REFERENCES product(id) ON DELETE CASCADE
 );
+
+INSERT INTO orders (name, status, payment_method, total_price, street, city, country, pincode, email)
+VALUES
+    ('John Doe', 'Pending', 'Credit Card', 399.99, '123 Main St', 'New York', 'USA', '10001', 'johndoe@example.com'),
+    ('Jane Smith', 'Shipped', 'PayPal', 149.99, '456 Elm St', 'Los Angeles', 'USA', '90001', 'janesmith@example.com'),
+    ('Alice Johnson', 'Delivered', 'Credit Card', 249.99, '789 Oak St', 'Chicago', 'USA', '60601', 'alicejohnson@example.com'),
+    ('Bob Brown', 'Cancelled', 'Bank Transfer', 89.99, '321 Pine St', 'Houston', 'USA', '77001', 'bobbrown@example.com');
 
 
 

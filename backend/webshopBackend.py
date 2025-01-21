@@ -16,7 +16,7 @@ def create_app():
     # Database configuration
 
     # app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:root@db:3306/webshop'
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:root@localhost:3306/webshop'
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:abc456@localhost:3306/webshop'
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
     return app
@@ -301,12 +301,18 @@ def send_email(subject, body, recipient):
 
 #orders
 class Order(db.Model):
-   __tablename__ = 'orders'
-   id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-   status = db.Column(db.String(50), nullable=False)
-   payment_method = db.Column(db.String(50), nullable=False)
-   total_price = db.Column(db.Float, nullable=False)
-   email = db.Column(db.String(100), nullable=False)
+    __tablename__ = 'orders'
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    name = db.Column(db.String(100), nullable=False)  # Name of the customer
+    status = db.Column(db.String(50), nullable=False)
+    payment_method = db.Column(db.String(50), nullable=False)
+    total_price = db.Column(db.Float, nullable=False)
+    email = db.Column(db.String(100), nullable=False)
+    street = db.Column(db.String(200), nullable=False)  # Street address
+    city = db.Column(db.String(100), nullable=False)  # City
+    country = db.Column(db.String(100), nullable=False)  # Country
+    pincode = db.Column(db.String(20), nullable=False)  # Pincode/ZIP code
+
 
 
 class OrderDetails(db.Model):
@@ -321,93 +327,96 @@ class OrderDetails(db.Model):
    order = db.relationship('Order', backref=db.backref('details', lazy=True))
 @app.route('/createorder', methods=['POST'])
 def create_order():
-   data = request.json
+    data = request.json
 
+    try:
+        # Create the main order with detailed address
+        new_order = Order(
+            name=data['name'],
+            status=data['status'],
+            payment_method=data['payment_method'],
+            total_price=data['total_price'],
+            email=data['email'],
+            street=data['street'],  # Extract street from request
+            city=data['city'],  # Extract city from request
+            country=data['country'],  # Extract country from request
+            pincode=data['pincode']  # Extract pincode from request
+        )
+        db.session.add(new_order)
+        db.session.commit()
 
-   try:
-       # Create the main order
-       new_order = Order(
-           status=data['status'],
-           payment_method=data['payment_method'],
-           total_price=data['total_price'],
-           email=data['email']  # Store user email
-       )
-       db.session.add(new_order)
-       db.session.commit()
+        # Add products to OrderDetails
+        products = data['products']
+        product_details = []
+        for product_id, quantity in products.items():
+            product = Product.query.get(product_id)
+            if not product:
+                raise ValueError(f"Product with ID {product_id} not found.")
 
+            # Check inventory
+            inventory = Inventory.query.filter_by(product_id=product_id).first()
+            if not inventory or inventory.quantity < quantity:
+                raise ValueError(f"Not enough inventory for product {product.name}.")
 
-       # Add products to OrderDetails
-       products = data['products']
-       product_details = []
-       for product_id, quantity in products.items():
-           product = Product.query.get(product_id)
-           if not product:
-               raise ValueError(f"Product with ID {product_id} not found.")
+            # Reduce inventory
+            inventory.quantity -= quantity
 
+            order_detail = OrderDetails(
+                order_id=new_order.id,
+                product_id=product_id,
+                quantity=quantity,
+                price_per_unit=product.price
+            )
+            db.session.add(order_detail)
 
-           # Check inventory
-           inventory = Inventory.query.filter_by(product_id=product_id).first()
-           if not inventory or inventory.quantity < quantity:
-               raise ValueError(f"Not enough inventory for product {product.name}.")
+            # Collect product details for the email
+            product_details.append(f"{product.name} (x{quantity})")
 
+        db.session.commit()
 
-           # Reduce inventory
-           inventory.quantity -= quantity
+        # Send email notification
+        product_list = "\n".join(product_details)
+        subject = "Order Placed Successfully"
+        body = (
+            f"Hello {new_order.name},\n\nYour order has been successfully created with the following products:\n\n"
+            f"{product_list}\n\n"
+            f"Billing Address:\n{new_order.street}\n{new_order.city}, {new_order.country} - {new_order.pincode}\n\n"
+            f"Thank you for shopping with us!\n\nWEBSHOP :)"
+        )
+        send_email(subject, body, new_order.email)
 
-
-           order_detail = OrderDetails(
-               order_id=new_order.id,
-               product_id=product_id,
-               quantity=quantity,
-               price_per_unit=product.price
-           )
-           db.session.add(order_detail)
-
-
-           # Collect product details for the email
-           product_details.append(f"{product.name} (x{quantity})")
-
-
-       db.session.commit()
-
-
-       # Send email notification
-       product_list = "\n".join(product_details)
-       subject = "Order Placed Successfully"
-       body = (
-           f"Hello,\n\nYour order has been successfully created with the following products:\n\n"
-           f"{product_list}\n\nThank you for shopping with us!\n\nWEBSHOP :)"
-       )
-       send_email(subject, body)
-
-
-       return jsonify({"message": "Order created successfully", "order_id": new_order.id}), 201
-   except Exception as e:
-       db.session.rollback()
-       return jsonify({"error": str(e)}), 400
+        return jsonify({"message": "Order created successfully", "order_id": new_order.id}), 201
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 400
 
 # Read all orders
 @app.route('/orders', methods=['GET'])
 def get_orders():
-   orders = Order.query.all()
-   order_list = [
-       {
-           "id": order.id,
-           "status": order.status,
-           "payment_method": order.payment_method,
-           "total_price": order.total_price,
-           "details": [
-               {
-                   "product_id": detail.product_id,
-                   "quantity": detail.quantity,
-                   "price_per_unit": detail.price_per_unit
-               } for detail in order.details
-           ]
-       } for order in orders
-   ]
+    orders = Order.query.all()
+    order_list = [
+        {
+            "id": order.id,
+            "status": order.status,
+            "payment_method": order.payment_method,
+            "total_price": order.total_price,
+            "address": {
+                "street": order.street,
+                "city": order.city,
+                "country": order.country,
+                "pincode": order.pincode
+            },
+            "details": [
+                {
+                    "product_id": detail.product_id,
+                    "quantity": detail.quantity,
+                    "price_per_unit": detail.price_per_unit
+                } for detail in order.details
+            ]
+        } for order in orders
+    ]
 
-
-   return jsonify(order_list), 200
+    return jsonify(order_list), 200
 
 #view an Order
 @app.route('/orders/<int:id>', methods=['GET'])
@@ -419,6 +428,12 @@ def get_order(id):
         "status": order.status,
         "payment_method": order.payment_method,
         "total_price": order.total_price,
+        "address": {
+            "street": order.street,
+            "city": order.city,
+            "country": order.country,
+            "pincode": order.pincode
+        },
         "details": [
             {
                 "product_id": detail.product_id,
@@ -427,84 +442,79 @@ def get_order(id):
             } for detail in order.details
         ]
     }
-
-    # Send email notification
+ # Send email notification
     subject = "Order Viewed Notification"
-    body = f"Hello,\n\nOrder #{order.id} has been viewed.\n\nStatus: {order.status}\nTotal Price: {order.total_price}\n\nThank you!"
-    send_email(subject, body)
+    body = (
+        f"Hello,\n\nOrder #{order.id} has been viewed.\n\n"
+        f"Status: {order.status}\nTotal Price: {order.total_price}\n\n"
+        f"Address:\n{order.street}\n{order.city}, {order.country} - {order.pincode}\n\n"
+        f"Thank you!"
+    )
+    send_email(subject, body, order.email)
 
     return jsonify(order_data), 200
 
 #Update Order
 @app.route('/orders/<int:id>', methods=['PUT'])
 def update_order(id):
-   data = request.json
-   order = Order.query.get_or_404(id)
+    data = request.json
+    order = Order.query.get_or_404(id)
 
+    try:
+        # Update order fields
+        order.status = data.get('status', order.status)
+        order.payment_method = data.get('payment_method', order.payment_method)
+        order.total_price = data.get('total_price', order.total_price)
+        order.street = data.get('street', order.street)
+        order.city = data.get('city', order.city)
+        order.country = data.get('country', order.country)
+        order.pincode = data.get('pincode', order.pincode)
 
-   try:
-       # Update order fields
-       order.status = data.get('status', order.status)
-       order.payment_method = data.get('payment_method', order.payment_method)
-       order.total_price = data.get('total_price', order.total_price)
+        # Update order details (optional)
+        updated_products = []
+        if 'details' in data:
+            # Clear existing order details
+            for detail in order.details:
+                db.session.delete(detail)
 
+            # Add new order details
+            for product_id, quantity in data['details'].items():
+                product = Product.query.get(product_id)
 
-       # Update order details (optional)
-       updated_products = []
-       if 'details' in data:
-           # Clear existing order details
-           for detail in order.details:
-               db.session.delete(detail)
+                # Validate product existence
+                if not product:
+                    raise ValueError(f"Product with ID {product_id} does not exist.")
 
+                order_detail = OrderDetails(
+                    order_id=order.id,
+                    product_id=product_id,
+                    quantity=quantity,
+                    price_per_unit=product.price
+                )
+                db.session.add(order_detail)
 
-           # Add new order details
-           for product_id, quantity in data['details'].items():
-               product = Product.query.get(product_id)
+                # Collect product details for email
+                updated_products.append(f"{product.name} (x{quantity})")
 
+        db.session.commit()
 
-               # Validate product existence
-               if not product:
-                   raise ValueError(f"Product with ID {product_id} does not exist.")
+        # Send email notification
+        subject = "Order Updated Notification"
+        product_list = "\n".join(updated_products)
+        body = (
+            f"Hello,\n\nOrder #{order.id} has been updated.\n\n"
+            f"Status: {order.status}\n"
+            "Thank you for shopping with us!"
+        )
+        send_email(subject, body, order.email)  # Added recipient email
 
-
-               order_detail = OrderDetails(
-                   order_id=order.id,
-                   product_id=product_id,
-                   quantity=quantity,
-                   price_per_unit=product.price
-               )
-               db.session.add(order_detail)
-
-
-               # Collect product details for email
-               updated_products.append(f"{product.name} (x{quantity})")
-
-
-       db.session.commit()
-
-
-       # Send email notification
-       subject = "Order Updated Notification"
-       product_list = "\n".join(updated_products)
-       body = (
-           f"Hello,\n\nOrder #{order.id} has been updated.\n\n"
-           f"Status: {order.status}\n"
-           f"Payment Method: {order.payment_method}\n"
-           f"Total Price: {order.total_price}\n\n"
-           f"Updated Products:\n{product_list}\n\n"
-           "Thank you for shopping with us!"
-       )
-       send_email(subject, body)
-
-
-       return jsonify({"message": "Order updated successfully"}), 200
-   except ValueError as ve:
-       db.session.rollback()
-       return jsonify({"error": str(ve)}), 400
-   except Exception as e:
-       db.session.rollback()
-       return jsonify({"error": str(e)}), 400
-
+        return jsonify({"message": "Order updated successfully"}), 200
+    except ValueError as ve:
+        db.session.rollback()
+        return jsonify({"error": str(ve)}), 400
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 400
 
 #Delete / Cancel Order
 @app.route('/orders/<int:id>', methods=['DELETE'])
