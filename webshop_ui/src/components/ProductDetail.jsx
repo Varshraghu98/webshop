@@ -25,6 +25,31 @@ const ProductDetail = () => {
     fetchProducts();
   }, []);
 
+  // Function to handle adding a product to the cart
+  const handleAddToCart = async (productId) => {
+    try {
+      const response = await fetch(import.meta.env.VITE_APP_API_POST_CART_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          product_id: productId,
+          quantity: 1,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Error: ${response.status} ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      toast.success(`Product added to cart: ${data.message}`);
+    } catch (err) {
+      toast.error(`Failed to add product to cart: ${err.message}`);
+    }
+  };
+
   if (loading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
@@ -35,22 +60,21 @@ const ProductDetail = () => {
 
   return (
     <Box sx={{ padding: '64px 24px' }}>
-      {/* Added padding to avoid heading hiding behind navbar */}
       <Typography variant="h4" gutterBottom textAlign="center">
         Our Products
       </Typography>
       <Grid
         container
-        spacing={4} // Increased spacing between cards
-        justifyContent="space-evenly" // Even spacing across the row
+        spacing={4}
+        justifyContent="space-evenly"
       >
         {products.map((product) => (
           <Grid
             item
-            xs={12} // Full-width on very small screens
-            sm={6} // 2 cards per row on small screens
-            md={4} // 3 cards per row on medium screens
-            lg={3} // 4 cards per row on large screens
+            xs={12}
+            sm={6}
+            md={4}
+            lg={3}
             key={product.id}
           >
             <Card
@@ -85,8 +109,8 @@ const ProductDetail = () => {
                 variant="contained"
                 color="primary"
                 fullWidth
-                href={`/product/${product.id}`}
                 sx={{ mt: 'auto' }}
+                onClick={() => handleAddToCart(product.id)} // Call the function when button is clicked
               >
                 Add to Cart
               </Button>

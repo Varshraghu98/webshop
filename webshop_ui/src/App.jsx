@@ -2,7 +2,7 @@ import { useState } from 'react';
 import NavBar from './components/Navbar/Navbar';
 import ShopFooter from './components/Footer/ShopFooter';
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom"
-import ProductDetail from './components/Product/ProductDetail';
+import ProductDetail from './components/ProductDetail';
 import './App.css';
 
 function App() {
