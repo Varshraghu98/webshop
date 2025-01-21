@@ -72,7 +72,7 @@ const App = () => {
   }
 
   return (
-    <Box sx={{ padding: 2, marginTop: 8 }}>
+    <Box sx={{ padding: 2, marginTop: 8, color: "black" }}>
       {/* Adding margin to fix heading hiding */}
       <Typography variant="h4" gutterBottom>
         Your Cart
