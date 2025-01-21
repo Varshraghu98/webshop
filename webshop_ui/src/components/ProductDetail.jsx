@@ -137,14 +137,19 @@ const ProductDetail = () => {
           />
 
           {/* Category Dropdown Filter */}
-          <FormControl sx={{ width: "300px" }}>
-            <InputLabel>Filter by Category</InputLabel>
-            <Select
-              multiple
-              value={selectedCategories}
-              onChange={handleCategoryChange}
-              renderValue={(selected) => selected.join(", ")}
-            >
+          <FormControl sx={{ width: "300px" }} variant="outlined">
+          <InputLabel id="category-filter-label" sx={{ background: "white", padding: "0 4px" }}>
+            Filter by Category
+          </InputLabel>
+          <Select
+            labelId="category-filter-label"
+            id="category-filter"
+            multiple
+            value={selectedCategories}
+            onChange={handleCategoryChange}
+            renderValue={(selected) => selected.join(", ")}
+            label="Filter by Category"
+          >
               {categories.map((category) => (
                 <MenuItem key={category} value={category}>
                   <Checkbox checked={selectedCategories.includes(category)} />
