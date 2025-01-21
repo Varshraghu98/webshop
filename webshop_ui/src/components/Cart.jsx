@@ -75,63 +75,67 @@ const App = () => {
     <Box sx={{ padding: 2, marginTop: 8 }}>
       {/* Adding margin to fix heading hiding */}
       <Typography variant="h4" gutterBottom>
-        Cart Items
+        Your Cart
       </Typography>
       <Grid container spacing={3}>
-        {cartItems.map((item) => (
-          <Grid item xs={12} sm={6} md={6} key={item.id}>
-            {/* Adjusted Grid item size for larger cards */}
-            <Card>
-              <CardMedia
-                component="img"
-                height="200"
-                image={`data:image/jpeg;base64,${item.image}`}
-                alt={item.name}
-              />
-              <CardContent>
-                <Typography variant="h6">{item.name}</Typography>
-                <Typography variant="body2" color="textSecondary">
-                  {item.description}
-                </Typography>
-                <Typography variant="body1">Price: ${item.price}</Typography>
-                <Typography variant="body1">
-                  Quantity: {item.quantity}
-                </Typography>
-                <Box sx={{ display: "flex", alignItems: "center", gap: 1, mt: 2 }}>
-                  <Button
-                    variant="contained"
-                    size="small"
-                    onClick={() =>
-                      updateQuantity(item.id, Math.max(1, item.quantity - 1))
-                    }
-                    disabled={item.quantity === 1}
-                  >
-                    -
-                  </Button>
-                  <Typography>{item.quantity}</Typography>
-                  <Button
-                    variant="contained"
-                    size="small"
-                    onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                  >
-                    +
-                  </Button>
-                </Box>
-                <Button
-                  variant="outlined"
-                  color="error"
-                  onClick={() => removeItem(item.id)}
-                  sx={{ mt: 2 }}
-                >
-                  Remove
-                </Button>
-              </CardContent>
-            </Card>
-          </Grid>
-        ))}
-      </Grid>
+  {cartItems.map((item, index) => (
+    <Grid
+      item
+      xs={12} // Full-width for single row
+      sm={cartItems.length === 1 ? 12 : 6} // Adjust width for one or more items
+      md={cartItems.length === 1 ? 12 : 6} // Adjust width for one or more items
+      key={item.id}
+    >
+      <Card>
+        <CardMedia
+          component="img"
+          height="200"
+          image={`data:image/jpeg;base64,${item.image}`}
+          alt={item.name}
+        />
+        <CardContent>
+          <Typography variant="h6">{item.name}</Typography>
+          <Typography variant="body2" color="textSecondary">
+            {item.description}
+          </Typography>
+          <Typography variant="body1">Price: €{item.price}</Typography>
+          <Typography variant="body1">Quantity: {item.quantity}</Typography>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1, mt: 2 }}>
+            <Button
+              variant="contained"
+              size="small"
+              onClick={() =>
+                updateQuantity(item.id, Math.max(1, item.quantity - 1))
+              }
+              disabled={item.quantity === 1}
+            >
+              -
+            </Button>
+            <Typography>{item.quantity}</Typography>
+            <Button
+              variant="contained"
+              size="small"
+              onClick={() => updateQuantity(item.id, item.quantity + 1)}
+            >
+              +
+            </Button>
+          </Box>
+          <Button
+            variant="outlined"
+            color="error"
+            onClick={() => removeItem(item.id)}
+            sx={{ mt: 2 }}
+          >
+            Remove
+          </Button>
+        </CardContent>
+      </Card>
+    </Grid>
+  ))}
+</Grid>
+
       <Box sx={{ marginTop: 4 }}>
-        <Typography variant="h5">Total Price: ${totalPrice.toFixed(2)}</Typography>
+        <Typography variant="h5">Total Price: €{totalPrice.toFixed(2)}</Typography>
       </Box>
     </Box>
   );
