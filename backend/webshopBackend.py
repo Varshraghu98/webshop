@@ -556,6 +556,19 @@ def delete_order(id):
         db.session.rollback()
         return jsonify({"error": str(e)}), 400
 
+@app.route('/mock-payment', methods=['POST'])
+def mock_payment():
+    data = request.json
+    card_number = data.get('cardNumber')
+    expiry = data.get('expiry')
+    cvv = data.get('cvv')
+
+    # Mock validation logic
+    if not card_number or not expiry or not cvv:
+        return jsonify({"success": False, "message": "Invalid payment details"}), 400
+
+    # Mock payment success
+    return jsonify({"success": True, "message": "Payment processed successfully!"}), 200
 
 if __name__ == '__main__':
     app.run(debug=True)
