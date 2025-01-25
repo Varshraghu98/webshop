@@ -166,13 +166,13 @@ const CheckoutForm = () => {
       status: "Order Placed",
       payment_method: paymentMethod,
       total_price: totalPrice,
-      customer_details: {
+      /*customer_details: {
         name: checkoutData.name,
         email: checkoutData.email,
         street: checkoutData.street,
         city: checkoutData.city,
         pincode: checkoutData.pincode
-      },
+      },*/
       products: cartItems.reduce((acc, item) => {
         acc[item.id] = item.quantity;
         return acc;
