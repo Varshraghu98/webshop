@@ -380,22 +380,22 @@ def create_order():
     data = request.json
 
     # Validate input data
-    required_fields = ["status", "payment_method", "total_price", "customer_details", "products"]
+    required_fields = ["status", "payment_method", "total_price", "products"] #"customer_details",
     if not all(key in data for key in required_fields):
         return jsonify({"error": "Missing required fields in the request"}), 400
 
     try:
         # Create the main order
-        customer_details = data['customer_details']
+        #customer_details = data['customer_details']
         new_order = Order(
             status=data['status'],
             payment_method=data['payment_method'],
             total_price=data['total_price'],
-            customer_name=customer_details['name'],
-            customer_email=customer_details['email'],
-            customer_street=customer_details['street'],
-            customer_city=customer_details['city'],
-            customer_pincode=customer_details['pincode']
+            #customer_name=customer_details['name'],
+            #customer_email=customer_details['email'],
+            #customer_street=customer_details['street'],
+            #customer_city=customer_details['city'],
+            #customer_pincode=customer_details['pincode']
         )
         db.session.add(new_order)
         db.session.commit()
