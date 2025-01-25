@@ -84,11 +84,11 @@ const CheckoutForm = () => {
           }).then(() => {
             // Display payment options
             MySwal.fire({
-              title: "Payment Gateway",
+              title: "Payment Gateway", 
               html: `
                 <div>
-                  <button id="paypal-btn">Pay with PayPal</button>
-                  <button id="card-btn">Pay with Card</button>
+                  <button id="paypal-btn" style="background-color: #0070ba; color: white; border: none; padding: 10px 20px; margin: 5px; cursor: pointer;"> Pay with PayPal</button>
+                  <button id="card-btn" style="background-color: #333; color: white; border: none; padding: 10px 20px; margin: 5px; cursor: pointer;"> Pay with Card</button>
                 </div>
               `,
               didRender: () => {
