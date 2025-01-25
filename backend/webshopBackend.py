@@ -16,7 +16,7 @@ def create_app():
     # Database configuration
 
     # app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:root@db:3306/webshop'
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:abc456@localhost:3306/webshop'
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:newpassword@localhost:3306/webshop'
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
     return app
@@ -254,6 +254,61 @@ def get_cart_items():
 
         return jsonify(cart_list), 200
     except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
+@app.route('/cart/<int:id>', methods=['PUT'])
+def update_cart_item(id):
+    data = request.json  # Expecting a JSON payload with 'quantity'
+    cart_item = Cart.query.get_or_404(id)
+
+    try:
+        # Update quantity if provided
+        new_quantity = data.get('quantity')
+        if new_quantity is not None:
+            if new_quantity <= 0:
+                # Remove the cart item if quantity is zero or less
+                db.session.delete(cart_item)
+            else:
+                cart_item.quantity = new_quantity
+
+        db.session.commit()
+        return jsonify({"message": "Cart item updated successfully"}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 400
+
+@app.route('/cart', methods=['DELETE'])
+def delete_cart_contents():
+    try:
+        cart_item_id = request.args.get('id')  # Optional query parameter to delete a specific item
+
+        if cart_item_id:
+            # Delete a specific cart item
+            cart_item = Cart.query.get_or_404(cart_item_id)
+            db.session.delete(cart_item)
+        else:
+            # Clear the entire cart
+            Cart.query.delete()
+
+        db.session.commit()
+        return jsonify({"message": "Cart cleared successfully"}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 400
+
+@app.route('/cart/<int:id>', methods=['DELETE'])
+def delete_cart_item(id):
+    try:
+        # Fetch the cart item by ID
+        cart_item = Cart.query.get_or_404(id)
+
+        # Delete the cart item
+        db.session.delete(cart_item)
+        db.session.commit()
+
+        return jsonify({"message": f"Cart item with ID {id} deleted successfully"}), 200
+    except Exception as e:
+        db.session.rollback()
         return jsonify({"error": str(e)}), 400
 
 

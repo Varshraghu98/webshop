@@ -2,7 +2,8 @@ import { useState } from 'react';
 import NavBar from './components/Navbar/Navbar';
 import ShopFooter from './components/Footer/ShopFooter';
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom"
-import ProductDetail from './components/Product/ProductDetail';
+import ProductDetail from './components/ProductDetail';
+import Cart from './components/Cart';
 import './App.css';
 
 function App() {
@@ -15,6 +16,8 @@ function App() {
         <Routes>
             <Route path="/" element={<ProductDetail />} /> {/* Landing Page */}
             <Route path="/shop" element={<ProductDetail />} /> {/* Shop Route */}
+            <Route path="/cart" element={<Cart />} /> 
+            
         </Routes>
         
         
