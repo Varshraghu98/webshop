@@ -1,8 +1,8 @@
 from datetime import datetime
 
-import boto3
+#import boto3
 import uuid
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, logging
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 import base64
@@ -16,7 +16,7 @@ def create_app():
     # Database configuration
 
     # app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:root@db:3306/webshop'
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:newpassword@localhost:3306/webshop'
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:Apobangpo_2769@localhost:3306/webshop'
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
     return app
@@ -373,16 +373,29 @@ class OrderDetails(db.Model):
 
 
    order = db.relationship('Order', backref=db.backref('details', lazy=True))
+
+
 @app.route('/createorder', methods=['POST'])
 def create_order():
     data = request.json
 
+    # Validate input data
+    required_fields = ["status", "payment_method", "total_price", "products"] #"customer_details",
+    if not all(key in data for key in required_fields):
+        return jsonify({"error": "Missing required fields in the request"}), 400
+
     try:
         # Create the main order
+        #customer_details = data['customer_details']
         new_order = Order(
             status=data['status'],
             payment_method=data['payment_method'],
-            total_price=data['total_price']
+            total_price=data['total_price'],
+            #customer_name=customer_details['name'],
+            #customer_email=customer_details['email'],
+            #customer_street=customer_details['street'],
+            #customer_city=customer_details['city'],
+            #customer_pincode=customer_details['pincode']
         )
         db.session.add(new_order)
         db.session.commit()
@@ -391,10 +404,13 @@ def create_order():
         products = data['products']
         product_details = []
         for product_id, quantity in products.items():
-            # Assuming price_per_unit is fetched from the Product table
+            # Fetch product details
             product = Product.query.get(product_id)
+            if not product:
+                return jsonify({"error": f"Product with ID {product_id} not found"}), 404
+
             product_price = product.price
-            product_name = product.name  # Assuming the Product table has a `name` column
+            product_name = product.name
 
             order_detail = OrderDetails(
                 order_id=new_order.id,
@@ -410,14 +426,29 @@ def create_order():
         db.session.commit()
 
         # Send email notification
-        product_list = "\n".join(product_details)  # Format the list of products for the email
+        product_list = "\n".join(product_details)
         subject = "Order Created Successfully"
-        body = f"Hello,\n\nYour order has been successfully created with the following products:\n\n{product_list}\n\nThank you for shopping with us!\n\n WEBSHOP:)"
-        send_email(subject, body)
+        body = f"""Hello,\n\nYour order has been successfully created with the following products:\n\n{product_list}\n\nThank you for shopping with us!\n\nWEBSHOP:)"""
+        try:
+            send_email(subject, body)
+        except Exception as email_error:
+            logging.error(f"Email sending failed: {email_error}")
+            return jsonify({
+                "message": "Order created but failed to send email",
+                "order_id": new_order.id,
+                "email_error": str(email_error)
+            }), 201
 
-        return jsonify({"message": "Order created successfully", "order_id": new_order.id}), 201
+        return jsonify({
+            "message": "Order created successfully",
+            "order_id": new_order.id,
+            "products": product_details,
+            "total_price": new_order.total_price,
+        }), 201
+
     except Exception as e:
         db.session.rollback()
+        logging.error(f"Error creating order: {str(e)}")
         return jsonify({"error": str(e)}), 400
 
 
