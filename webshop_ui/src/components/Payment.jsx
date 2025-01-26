@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import Swal from "sweetalert2";
 import withReactContent from "sweetalert2-react-content";
 import { Button } from "@mui/material";
@@ -7,6 +7,17 @@ import axios from "axios";
 const MySwal = withReactContent(Swal);
 
 const CheckoutForm = () => {
+  useEffect(() => {
+    // Load PayPal SDK (sandbox environment)
+    const script = document.createElement("script");
+    script.src =
+      "https://www.paypal.com/sdk/js?client-id=AVCPlT1ELF9LLibRxZLcCHgpcoPLpV23mp7GJj07racxpnxQRZAWzJJesOOm-W3UseEXbpYJiq1lkn91&currency=EUR"; // Replace 'your-client-id' with your sandbox client ID
+    script.addEventListener("load", () => {
+      console.log("PayPal SDK loaded");
+    });
+    document.body.appendChild(script);
+  }, []);
+
   const handleCheckout = () => {
     MySwal.fire({
       title: "Checkout Form",
@@ -82,76 +93,43 @@ const CheckoutForm = () => {
             `,
             confirmButtonText: "Proceed to Payment",
           }).then(() => {
-            // Display payment options
+            // Display Payment button
             MySwal.fire({
-              title: "Payment Gateway", 
-              html: `
-                <div>
-                  <button id="paypal-btn" style="background-color: #0070ba; color: white; border: none; padding: 10px 20px; margin: 5px; cursor: pointer;"> Pay with PayPal</button>
-                  <button id="card-btn" style="background-color: #333; color: white; border: none; padding: 10px 20px; margin: 5px; cursor: pointer;"> Pay with Card</button>
-                </div>
-              `,
+              title: "Choose Payment Method",
+              html: `<div id="paypal-btn-container"></div>`,
               didRender: () => {
-                // PayPal Payment
-                document
-                  .getElementById("paypal-btn")
-                  .addEventListener("click", () => {
-                    MySwal.fire("Success", "Payment processed via PayPal!", "success")
-                      .then(() => {
+                // Load the PayPal button when rendered
+                window.paypal.Buttons({
+                  createOrder: (data, actions) => {
+                    return actions.order.create({
+                      purchase_units: [
+                        {
+                          amount: {
+                            value: totalPrice.toFixed(2),
+                          },
+                        },
+                      ],
+                    });
+                  },
+                  onApprove: (data, actions) => {
+                    return actions.order.capture().then((details) => {
+                      MySwal.fire({
+                        title: "Payment Successful",
+                        text: `Payment completed successfully with PayPal!`,
+                        icon: "success",
+                      }).then(() => {
                         placeOrder(checkoutData, cartItems, "PayPal", totalPrice);
                       });
-                  });
-
-                // Card Payment
-                document.getElementById("card-btn").addEventListener("click", () => {
-                  MySwal.fire({
-                    title: "Enter Card Details",
-                    html: `
-                      <label for="card-number">Card Number:</label>
-                      <input type="text" id="card-number" class="swal2-input" placeholder="1234 5678 9012 3456"><br/>
-                      <label for="expiry">Expiry Date:</label>
-                      <input type="text" id="expiry" class="swal2-input" placeholder="MM/YY"><br/>
-                      <label for="cvv">CVV:</label>
-                      <input type="text" id="cvv" class="swal2-input" placeholder="123">
-                    `,
-                    showCancelButton: true,
-                    confirmButtonText: "Submit",
-                    cancelButtonText: "Cancel",
-                    preConfirm: () => {
-                      const cardNumber = Swal.getPopup().querySelector("#card-number").value;
-                      const expiry = Swal.getPopup().querySelector("#expiry").value;
-                      const cvv = Swal.getPopup().querySelector("#cvv").value;
-
-                      if (!cardNumber || !expiry || !cvv) {
-                        Swal.showValidationMessage("Please fill out all fields");
-                      }
-
-                      return {
-                        cardNumber,
-                        expiry,
-                        cvv,
-                      };
-                    },
-                  }).then((cardResult) => {
-                    if (cardResult.isConfirmed) {
-                      // Mock successful card payment
-                      axios
-                        .post("http://127.0.0.1:5000/mock-payment", cardResult.value)
-                        .then(() => {
-                          MySwal.fire(
-                            "Success",
-                            "Payment processed successfully via Card!",
-                            "success"
-                          ).then(() => {
-                            placeOrder(checkoutData, cartItems, "Card", totalPrice);
-                          });
-                        })
-                        .catch(() => {
-                          MySwal.fire("Error", "Payment failed!", "error");
-                        });
-                    }
-                  });
-                });
+                    });
+                  },
+                  onError: (err) => {
+                    MySwal.fire({
+                      title: "Payment Failed",
+                      text: "Something went wrong with your PayPal payment. Please try again.",
+                      icon: "error",
+                    });
+                  },
+                }).render("#paypal-btn-container");
               },
             });
           });
@@ -166,22 +144,12 @@ const CheckoutForm = () => {
       status: "Order Placed",
       payment_method: paymentMethod,
       total_price: totalPrice,
-      /*customer_details: {
-        name: checkoutData.name,
-        email: checkoutData.email,
-        street: checkoutData.street,
-        city: checkoutData.city,
-        pincode: checkoutData.pincode
-      },*/
       products: cartItems.reduce((acc, item) => {
         acc[item.id] = item.quantity;
         return acc;
       }, {}),
     };
-  
-    // Log the payload to verify
-    console.log("Placing Order with Data:", orderData);
-  
+
     // Make the API call to create the order
     axios
       .post("http://127.0.0.1:5000/createorder", orderData)
@@ -194,7 +162,7 @@ const CheckoutForm = () => {
         // Success: Show success message and refresh page
         MySwal.fire(
           "Success",
-          "Order placed successfully \n An Email is sent to your registered email id!",
+          "Order placed successfully. An email is sent to your registered email id!",
           "success"
         ).then(() => {
           window.location.reload();

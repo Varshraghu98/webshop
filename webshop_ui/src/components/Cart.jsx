@@ -9,7 +9,8 @@ import {
   Grid,
   Button,
 } from "@mui/material";
-import CheckoutForm from "./CheckoutForm"; // Import the separate CheckoutForm component
+//import CheckoutForm from "./CheckoutForm"; // Import the separate CheckoutForm component
+import CheckoutForm from "./Payment";
 
 const Cart = () => {
   const [cartItems, setCartItems] = useState([]);
