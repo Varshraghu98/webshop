@@ -84,11 +84,11 @@ const CheckoutForm = () => {
           }).then(() => {
             // Display payment options
             MySwal.fire({
-              title: "Payment Gateway",
+              title: "Payment Gateway", 
               html: `
                 <div>
-                  <button id="paypal-btn">Pay with PayPal</button>
-                  <button id="card-btn">Pay with Card</button>
+                  <button id="paypal-btn" style="background-color: #0070ba; color: white; border: none; padding: 10px 20px; margin: 5px; cursor: pointer;"> Pay with PayPal</button>
+                  <button id="card-btn" style="background-color: #333; color: white; border: none; padding: 10px 20px; margin: 5px; cursor: pointer;"> Pay with Card</button>
                 </div>
               `,
               didRender: () => {
@@ -161,40 +161,47 @@ const CheckoutForm = () => {
   };
 
   const placeOrder = (checkoutData, cartItems, paymentMethod, totalPrice) => {
+    // Construct the payload with checkout details and cart items
     const orderData = {
-      name: checkoutData.name,
-      email: checkoutData.email,
-      street: checkoutData.street,
-      city: checkoutData.city,
-      pincode: checkoutData.pincode,
-      products: cartItems.map((item) => ({
-        id: item.id,
-        name: item.name,
-        quantity: item.quantity,
-        price: item.price,
-      })),
-      paymentSuccessful: true,
-      paymentMethod: paymentMethod,
-      totalPrice: totalPrice,
+      status: "Order Placed",
+      payment_method: paymentMethod,
+      total_price: totalPrice,
+      /*customer_details: {
+        name: checkoutData.name,
+        email: checkoutData.email,
+        street: checkoutData.street,
+        city: checkoutData.city,
+        pincode: checkoutData.pincode
+      },*/
+      products: cartItems.reduce((acc, item) => {
+        acc[item.id] = item.quantity;
+        return acc;
+      }, {}),
     };
-
+  
+    // Log the payload to verify
+    console.log("Placing Order with Data:", orderData);
+  
+    // Make the API call to create the order
     axios
       .post("http://127.0.0.1:5000/createorder", orderData)
-      .then(() => {
-        // Call DELETE API to clear the cart
-        axios
-          .delete("http://127.0.0.1:5000/cart")
-          .then(() => {
-            MySwal.fire(
-              "Success",
-              "Order placed successfully \n An Email is sent to your registered email id!",
-              "success"
-            ).then(() => {
-              window.location.reload(); // Refresh the page
-            });
-          })
+      .then((response) => {
+        console.log("Order API Response:", response.data);
+        // Clear the cart after placing the order
+        return axios.delete("http://127.0.0.1:5000/cart");
       })
-      .catch(() => {
+      .then(() => {
+        // Success: Show success message and refresh page
+        MySwal.fire(
+          "Success",
+          "Order placed successfully \n An Email is sent to your registered email id!",
+          "success"
+        ).then(() => {
+          window.location.reload();
+        });
+      })
+      .catch((error) => {
+        console.error("Error Placing Order:", error);
         MySwal.fire("Error", "Failed to place order. Please try again.", "error");
       });
   };
