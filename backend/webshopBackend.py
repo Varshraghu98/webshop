@@ -14,7 +14,9 @@ def create_app():
     CORS(app)
     # Database configuration
 
+
     # app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:root@db:3306/webshop'
+
     app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:newpassword@localhost:3306/webshop'
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
@@ -234,6 +236,8 @@ def add_to_cart():
         return jsonify({"error": str(e)}), 400
 
 
+from flask import jsonify
+
 @app.route('/cart', methods=['GET'])
 def get_cart_items():
     try:
@@ -245,18 +249,12 @@ def get_cart_items():
         for cart_item in cart_items:
             product = cart_item.product  # Get the associated product details
 
-            # Convert image (BLOB) to base64 string if it's stored as BLOB
-            if product.image:
-                image_base64 = base64.b64encode(product.image).decode('utf-8')
-            else:
-                image_base64 = None  # In case there's no image stored
-
             cart_list.append({
                 "id": cart_item.id,
                 "product_id": cart_item.product_id,
                 "name": product.name,
                 "category": product.category,
-                "image": image_base64,  # Return base64-encoded image
+                "image_url": product.image_url,  # Use the image_url directly
                 "description": product.description,
                 "price": product.price,
                 "quantity": cart_item.quantity
