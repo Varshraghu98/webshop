@@ -141,14 +141,22 @@ const CheckoutForm = () => {
   const placeOrder = (checkoutData, cartItems, paymentMethod, totalPrice) => {
     // Construct the payload with checkout details and cart items
     const orderData = {
-      status: "Order Placed",
-      payment_method: paymentMethod,
-      total_price: totalPrice,
-      products: cartItems.reduce((acc, item) => {
-        acc[item.id] = item.quantity;
-        return acc;
-      }, {}),
+      name: checkoutData.name,
+      email: checkoutData.email,
+      street: checkoutData.street,
+      city: checkoutData.city,
+      pincode: checkoutData.pincode,
+      paymentSuccessful: true,
+      paymentMethod: paymentMethod, // Use the dynamic payment method variable
+      totalPrice: totalPrice, // Use the dynamic total price variable
+      products: cartItems.map((item) => ({
+        id: item.id,
+        name: item.name,
+        quantity: item.quantity,
+        price: item.price,
+      })),
     };
+    
 
     // Make the API call to create the order
     axios
