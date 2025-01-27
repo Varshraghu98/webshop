@@ -1,12 +1,11 @@
 from datetime import datetime
 
 import boto3
-import uuid
-from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
+from botocore.exceptions import NoCredentialsError
 import base64
-from werkzeug.utils import secure_filename
+from flask import Flask, request, jsonify
 
 
 # Initialize Flask app and SQLAlchemy
@@ -24,12 +23,23 @@ def create_app():
 app = create_app()
 db = SQLAlchemy(app)
 
+# AWS S3 Configuration
+S3_BUCKET = "webshopbackendimagestorage"
+S3_REGION = "eu-north-1"  # e.g., "us-east-1"
+S3_ACCESS_KEY = "AKIAWAA655SRFCT6SQM7"
+S3_SECRET_KEY = "FVD9ZnjjRLJMFw5BqiwR95TAHuqprM+AaIVBzGRs"
+
+s3_client = boto3.client('s3',
+                         aws_access_key_id=S3_ACCESS_KEY,
+                         aws_secret_access_key=S3_SECRET_KEY,
+                         region_name=S3_REGION)
+
 # Define the Product model
 class Product(db.Model):
     __tablename__ = 'product'  # Explicitly specify the existing table name
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     category = db.Column(db.String(100), nullable=False)
-    image = db.Column(db.LargeBinary, nullable=False)  #Store image as binary data
+    image_url = db.Column(db.String(500), nullable=False)  # Store image URL
     name = db.Column(db.String(100), nullable=False)
     description = db.Column(db.Text, nullable=False)
     price = db.Column(db.Float, nullable=False)
@@ -63,46 +73,49 @@ class Cart(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
-
 @app.route('/products', methods=['POST'])
 def create_product():
-    data = request.form  # Use form data to handle both text and file inputs
-    file = request.files.get('image')  # Get the image file from the request
+    data = request.form
+    file = request.files.get('image')
 
     if not file:
         return jsonify({"error": "Image file is required"}), 400
 
     try:
-        # Read the file's binary data
-        image_data = file.read()
+        # Upload the image to S3
+        file_name = f"products/{file.filename}"
+        s3_client.upload_fileobj(file, S3_BUCKET, file_name, ExtraArgs={"ContentType": file.content_type})
+
+        # Construct the S3 URL
+        image_url = f"https://{S3_BUCKET}.s3.{S3_REGION}.amazonaws.com/{file_name}"
 
         # Create a new product record
         new_product = Product(
             category=data['category'],
-            image=image_data,  # Store binary data in the database
+            image_url=image_url,  # Store the image URL in the database
             name=data['name'],
             description=data['description'],
-            price=float(data['price']),
-            id=int(data['id'])
+            price=float(data['price'])
         )
 
         db.session.add(new_product)
         db.session.commit()
 
-        return jsonify({"message": "Product created successfully", "product": {
-            "category": data['category'],
-            "name": data['name'],
-            "description": data['description'],
-            "price": data['price'],
-            "id": data['id']
-        }}), 201
+        return jsonify({
+            "message": "Product created successfully",
+            "product": {
+                "category": data['category'],
+                "name": data['name'],
+                "description": data['description'],
+                "price": data['price'],
+                "image_url": image_url
+            }
+        }), 201
+    except NoCredentialsError:
+        return jsonify({"error": "AWS credentials not found"}), 500
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 400
-
-import base64
-from flask import Flask, request, jsonify
-from io import BytesIO
 
 @app.route('/products', methods=['GET'])
 def get_products():
@@ -118,13 +131,10 @@ def get_products():
     product_list = []
     for product in products:
         if check_inventory(product.id) > 0:
-            # Convert the binary image data to base64 string
-            image_base64 = base64.b64encode(product.image).decode('utf-8')  # Convert to base64 and decode as UTF-8
-
             product_data = {
                 "id": product.id,
                 "category": product.category,
-                "image": image_base64,  # Return image as base64 string
+                "image_url": product.image_url,  # Return image URL
                 "name": product.name,
                 "description": product.description,
                 "price": product.price
