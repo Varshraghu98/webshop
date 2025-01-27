@@ -26,8 +26,8 @@ db = SQLAlchemy(app)
 # AWS S3 Configuration
 S3_BUCKET = "webshopbackendimagestorage"
 S3_REGION = "eu-north-1"  # e.g., "us-east-1"
-S3_ACCESS_KEY = "AKIAWAA655SRFCT6SQM7"
-S3_SECRET_KEY = "FVD9ZnjjRLJMFw5BqiwR95TAHuqprM+AaIVBzGRs"
+S3_ACCESS_KEY = "Test"
+S3_SECRET_KEY = "Test"
 
 s3_client = boto3.client('s3',
                          aws_access_key_id=S3_ACCESS_KEY,
