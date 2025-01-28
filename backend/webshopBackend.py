@@ -29,8 +29,9 @@ db = SQLAlchemy(app)
 # AWS S3 Configuration
 S3_BUCKET = "webshopbackendimagestorage"
 S3_REGION = "eu-north-1"  # e.g., "us-east-1"
-S3_ACCESS_KEY = "Test"
-S3_SECRET_KEY = "Test"
+S3_ACCESS_KEY = "test"
+S3_SECRET_KEY = "test"
+
 
 s3_client = boto3.client('s3',
                          aws_access_key_id=S3_ACCESS_KEY,
@@ -341,27 +342,38 @@ def check_inventory(product_id):
 
 #Mail Alerts
 import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 
-# Mailtrap configuration
-MAILTRAP_USERNAME = "a738c74b91fd48"
-MAILTRAP_PASSWORD = "e045f2b6d77ed1"
-MAILTRAP_SERVER = "sandbox.smtp.mailtrap.io"
-MAILTRAP_PORT = 2525
-SENDER = "Test Sender <info@webshop.com>"
-RECEIVER = "Test Receiver <testwebshop123@gmail.com>"
+SMTP_SERVER = "smtp.gmail.com"
+SMTP_PORT = 587
+USERNAME = "lowtechwebshop@gmail.com"  # Your Gmail address
+PASSWORD = ""  # Your Gmail App Password >
+SENDER = "Webshop <lowtechwebshop@gmail.com>"
 
 
-# Function to send email
-def send_email(subject, body):
-    message = f"Subject: {subject}\nTo: {RECEIVER}\nFrom: {SENDER}\n\n{body}"
+def send_email(subject, body, recipient_email):
+    """Function to send emails using Gmail SMTP"""
     try:
-        with smtplib.SMTP(MAILTRAP_SERVER, MAILTRAP_PORT) as server:
-            server.starttls()
-            server.login(MAILTRAP_USERNAME, MAILTRAP_PASSWORD)
-            server.sendmail(SENDER, RECEIVER, message)
-        print("Email sent successfully.")
+        server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
+        server.starttls()
+        server.login(USERNAME, PASSWORD)
+
+        # Create a multipart message
+        message = MIMEMultipart()
+        message['Subject'] = subject
+        message['To'] = recipient_email
+        message['From'] = SENDER
+
+        # Attach the HTML body to the message
+        message.attach(MIMEText(body, 'html'))
+
+        server.sendmail(USERNAME, recipient_email, message.as_string())
+        server.quit()
+        print(f"Email sent successfully to {recipient_email}")
     except Exception as e:
         print(f"Failed to send email: {e}")
+
 
 #orders
 class Order(db.Model):
@@ -386,7 +398,6 @@ class OrderDetails(db.Model):
    price_per_unit = db.Column(db.Float, nullable=False)
 
    order = db.relationship('Order', backref=db.backref('details', lazy=True))
-
 @app.route('/createorder', methods=['POST'])
 def create_order():
     data = request.json
@@ -424,17 +435,50 @@ def create_order():
 
         db.session.commit()
 
-        # Send email notification
-        product_list = "\n".join(product_details)  # Format the list of products for the email
-        subject = "Order Created Successfully"
-        body = f"Hello,\n\nYour order has been successfully created with the following products:\n\n{product_list}\n\nThank you for shopping with us!\n\n WEBSHOP:)"
-        send_email(subject, body)
+        # Sending email notification for order placement
+        # Sending email notification for order placement
+        product_list = "<br>".join(product_details)  # Use <br> for line breaks in HTML
+        subject = "Order Confirmation - Webshop"
+        body = f"""\
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <style>
+                body {{ font-family: Arial, sans-serif; line-height: 1.6; background-color: #f8f9fa; color: #333; }}
+                .container {{ max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 5px; background: #fff; }}
+                h1 {{ color: #28a745; }} /* Green color for confirmation */
+                h3 {{ color: #333; }}
+                p {{ margin: 10px 0; }}
+                .total-price {{ font-weight: bold; font-size: 1.2em; color: #d9534f; }}
+                .thank-you {{ margin-top: 20px; font-style: italic; }}
+                .footer {{ margin-top: 30px; font-size: 0.9em; color: #666; text-align: center; }}
+                .product-list {{ background: #f1f1f1; padding: 10px; border-radius: 5px; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <h1>Order Confirmation</h1>
+                <p>Hello {data['name']},</p>
+                <p>Your order has been placed successfully!</p>
+                <h3>Items Ordered:</h3>
+                <div class="product-list"><pre>{product_list}</pre></div>
+                <p class="total-price">Total Price: {data['totalPrice']} EUR</p>
+                <p>Thank you for shopping with us!</p>
+                <p class="thank-you">- Team Webshop</p>
+            </div>
+            <div class="footer">If you have any questions, feel free to contact our support team.</div>
+        </body>
+        </html>
+        """
 
-        return jsonify({"message": "Order created successfully", "order_id": new_order.id}), 201
+        send_email(subject, body, data['email'])
+
+        return jsonify({"message": "Yay!!! Your Order placed successfully", "order_id": new_order.id}), 201
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 400
-
 # Read all orders
 @app.route('/orders', methods=['GET'])
 def get_orders():
@@ -488,11 +532,6 @@ def get_order(id):
         ]
     }
 
-    # Send email notification
-    subject = "Order Viewed Notification"
-    body = f"Hello,\n\nOrder #{order.id} has been viewed.\n\nName: {order.name}\nTotal Price: {order.total_price}\n\nThank you!"
-    send_email(subject, body)
-
     return jsonify(order_data), 200
 
 # Update Order
@@ -535,41 +574,18 @@ def update_order(id):
 
         db.session.commit()
 
-        # Send email notification
-        subject = "Order Updated Notification"
-        product_list = "\n".join(updated_products)
-        body = (
-            f"Hello,\n\nOrder #{order.id} has been updated.\n\n"
-            f"Name: {order.name}\n"
-            f"Email: {order.email}\n"
-            f"Payment Method: {order.payment_method}\n"
-            f"Total Price: {order.total_price}\n\n"
-            f"Updated Products:\n{product_list}\n\n"
-            "Thank you for shopping with us!"
-        )
-        send_email(subject, body)
-
         return jsonify({"message": "Order updated successfully"}), 200
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 400
 
-
-
-
-
-
-
-
-
-
-
-#Delete / Cancel Order
+# Delete / Cancel Order
 @app.route('/orders/<int:id>', methods=['DELETE'])
 def delete_order(id):
     order = Order.query.get_or_404(id)
 
     try:
+        email = order.email
         # Delete all order details
         for detail in order.details:
             db.session.delete(detail)
@@ -578,15 +594,45 @@ def delete_order(id):
         db.session.delete(order)
         db.session.commit()
 
-        # Send email notification
-        subject = "Alert Order Cancelled !!!"
-        body = f"Hello,\n\nOrder #{order.id} has been cancelled.\n\nThank you!"
-        send_email(subject, body)
+        # Send email notification for order cancellation
+        subject = "Order Cancellation - Webshop"
+        body = f"""\
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <style>
+                body {{ font-family: Arial, sans-serif; line-height: 1.6; background-color: #f8f9fa; color: #333; }}
+                .container {{ max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 5px; background: #fff; }}
+                h1 {{ color: #d9534f; }} /* Red color for cancellation */
+                p {{ margin: 10px 0; }}
+                .support {{ font-weight: bold; }}
+                .thank-you {{ margin-top: 20px; font-style: italic; }}
+                .footer {{ margin-top: 30px; font-size: 0.9em; color: #666; text-align: center; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <h1>Order Canceled</h1>
+                <p>Hello {order.name},</p>
+                <p>Your order <strong>#{id}</strong> has been successfully canceled.</p>
+                <p>If this was a mistake, please contact our support team.</p>
+                <p class="support">Thank you for shopping with us!</p>
+                <p class="thank-you">- Team Webshop</p>
+            </div>
+            <div class="footer">If you have any questions, feel free to contact our support team.</div>
+        </body>
+        </html>
+        """
+
+        send_email(subject, body, email)
 
         return jsonify({"message": "Order Cancelled successfully"}), 200
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 400
+
 @app.route('/mock-payment', methods=['POST'])
 def mock_payment():
     data = request.json
