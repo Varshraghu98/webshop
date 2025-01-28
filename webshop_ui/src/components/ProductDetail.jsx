@@ -32,7 +32,7 @@ const ProductDetail = () => {
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const response = await fetch(import.meta.env.VITE_APP_API_GET_PRODUCTS_URL);
+        const response = await fetch('http://127.0.0.1:5000/products');
         if (!response.ok) {
           throw new Error(`Error: ${response.status} ${response.statusText}`);
         }
@@ -57,7 +57,7 @@ const ProductDetail = () => {
 
   const handleAddToCart = async (productId) => {
     try {
-      const response = await fetch(import.meta.env.VITE_APP_API_POST_CART_URL, {
+      const response = await fetch('http://127.0.0.1:5000/cart', {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
