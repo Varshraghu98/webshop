@@ -51,28 +51,7 @@ const NavBar = () => {
           <Link to="/shop" className="nav-item" onClick={() => setIsOpen(false)}>
             Shop
           </Link>
-          <div
-            className="nav-item dropdown"
-            onMouseEnter={() => setShowDropdown(true)}
-            onMouseLeave={() => setShowDropdown(false)}
-          >
-            <span className="dropdown-label">Categories</span>
-            {showDropdown && (
-              <ul className="dropdown-menu">
-                {categories.map((category, index) => (
-                  <li key={index} className="dropdown-item">
-          <Link
-                      to={`/categories/${category.toLowerCase().replace(/ /g, "-")}`}
-            className="nav-item"
-            onClick={() => setIsOpen(false)}
-          >
-                      {category}
-          </Link>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
+          
           <Link
             to="/about"
             className="nav-item"

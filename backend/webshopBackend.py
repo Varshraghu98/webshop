@@ -1,12 +1,11 @@
 from datetime import datetime
 
 import boto3
-import uuid
-from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
+from botocore.exceptions import NoCredentialsError
 import base64
-from werkzeug.utils import secure_filename
+from flask import Flask, request, jsonify
 
 
 # Initialize Flask app and SQLAlchemy
@@ -15,8 +14,11 @@ def create_app():
     CORS(app)
     # Database configuration
 
+
     # app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:root@db:3306/webshop'
+
     app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:root@localhost:3306/webshop'
+
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
     return app
@@ -24,12 +26,23 @@ def create_app():
 app = create_app()
 db = SQLAlchemy(app)
 
+# AWS S3 Configuration
+S3_BUCKET = "webshopbackendimagestorage"
+S3_REGION = "eu-north-1"  # e.g., "us-east-1"
+S3_ACCESS_KEY = "Test"
+S3_SECRET_KEY = "Test"
+
+s3_client = boto3.client('s3',
+                         aws_access_key_id=S3_ACCESS_KEY,
+                         aws_secret_access_key=S3_SECRET_KEY,
+                         region_name=S3_REGION)
+
 # Define the Product model
 class Product(db.Model):
     __tablename__ = 'product'  # Explicitly specify the existing table name
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     category = db.Column(db.String(100), nullable=False)
-    image = db.Column(db.LargeBinary, nullable=False)  #Store image as binary data
+    image_url = db.Column(db.String(500), nullable=False)  # Store image URL
     name = db.Column(db.String(100), nullable=False)
     description = db.Column(db.Text, nullable=False)
     price = db.Column(db.Float, nullable=False)
@@ -63,46 +76,49 @@ class Cart(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
-
 @app.route('/products', methods=['POST'])
 def create_product():
-    data = request.form  # Use form data to handle both text and file inputs
-    file = request.files.get('image')  # Get the image file from the request
+    data = request.form
+    file = request.files.get('image')
 
     if not file:
         return jsonify({"error": "Image file is required"}), 400
 
     try:
-        # Read the file's binary data
-        image_data = file.read()
+        # Upload the image to S3
+        file_name = f"products/{file.filename}"
+        s3_client.upload_fileobj(file, S3_BUCKET, file_name, ExtraArgs={"ContentType": file.content_type})
+
+        # Construct the S3 URL
+        image_url = f"https://{S3_BUCKET}.s3.{S3_REGION}.amazonaws.com/{file_name}"
 
         # Create a new product record
         new_product = Product(
             category=data['category'],
-            image=image_data,  # Store binary data in the database
+            image_url=image_url,  # Store the image URL in the database
             name=data['name'],
             description=data['description'],
-            price=float(data['price']),
-            id=int(data['id'])
+            price=float(data['price'])
         )
 
         db.session.add(new_product)
         db.session.commit()
 
-        return jsonify({"message": "Product created successfully", "product": {
-            "category": data['category'],
-            "name": data['name'],
-            "description": data['description'],
-            "price": data['price'],
-            "id": data['id']
-        }}), 201
+        return jsonify({
+            "message": "Product created successfully",
+            "product": {
+                "category": data['category'],
+                "name": data['name'],
+                "description": data['description'],
+                "price": data['price'],
+                "image_url": image_url
+            }
+        }), 201
+    except NoCredentialsError:
+        return jsonify({"error": "AWS credentials not found"}), 500
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 400
-
-import base64
-from flask import Flask, request, jsonify
-from io import BytesIO
 
 @app.route('/products', methods=['GET'])
 def get_products():
@@ -118,13 +134,10 @@ def get_products():
     product_list = []
     for product in products:
         if check_inventory(product.id) > 0:
-            # Convert the binary image data to base64 string
-            image_base64 = base64.b64encode(product.image).decode('utf-8')  # Convert to base64 and decode as UTF-8
-
             product_data = {
                 "id": product.id,
                 "category": product.category,
-                "image": image_base64,  # Return image as base64 string
+                "image_url": product.image_url,  # Return image URL
                 "name": product.name,
                 "description": product.description,
                 "price": product.price
@@ -224,6 +237,8 @@ def add_to_cart():
         return jsonify({"error": str(e)}), 400
 
 
+from flask import jsonify
+
 @app.route('/cart', methods=['GET'])
 def get_cart_items():
     try:
@@ -235,18 +250,12 @@ def get_cart_items():
         for cart_item in cart_items:
             product = cart_item.product  # Get the associated product details
 
-            # Convert image (BLOB) to base64 string if it's stored as BLOB
-            if product.image:
-                image_base64 = base64.b64encode(product.image).decode('utf-8')
-            else:
-                image_base64 = None  # In case there's no image stored
-
             cart_list.append({
                 "id": cart_item.id,
                 "product_id": cart_item.product_id,
                 "name": product.name,
                 "category": product.category,
-                "image": image_base64,  # Return base64-encoded image
+                "image_url": product.image_url,  # Use the image_url directly
                 "description": product.description,
                 "price": product.price,
                 "quantity": cart_item.quantity
@@ -592,6 +601,19 @@ def mock_payment():
     # Mock payment success
     return jsonify({"success": True, "message": "Payment processed successfully!"}), 200
 
+@app.route('/mock-payment', methods=['POST'])
+def mock_payment():
+    data = request.json
+    card_number = data.get('cardNumber')
+    expiry = data.get('expiry')
+    cvv = data.get('cvv')
+
+    # Mock validation logic
+    if not card_number or not expiry or not cvv:
+        return jsonify({"success": False, "message": "Invalid payment details"}), 400
+
+    # Mock payment success
+    return jsonify({"success": True, "message": "Payment processed successfully!"}), 200
 
 if __name__ == '__main__':
     app.run(debug=True)

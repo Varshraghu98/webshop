@@ -9,7 +9,8 @@ import {
   Grid,
   Button,
 } from "@mui/material";
-import CheckoutForm from "./CheckoutForm"; // Import the separate CheckoutForm component
+//import CheckoutForm from "./CheckoutForm"; // Import the separate CheckoutForm component
+import CheckoutForm from "./Payment";
 
 const Cart = () => {
   const [cartItems, setCartItems] = useState([]);
@@ -75,7 +76,12 @@ const Cart = () => {
       </Typography>
       <Grid container spacing={3}>
         {cartItems.map((item) => (
-          <Grid item xs={12} sm={6} md={6} key={item.id}>
+          <Grid item 
+          xs={12} // Full-width for single row
+          sm={cartItems.length === 1 ? 12 : 6} // Adjust width for one or more items
+          md={cartItems.length === 1 ? 12 : 6} // Adjust width for one or more items
+          key={item.id}
+          >
             <Card>
               <CardMedia
                 component="img"
