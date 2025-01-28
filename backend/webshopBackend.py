@@ -1,12 +1,11 @@
 from datetime import datetime
 
 import boto3
-import uuid
-from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
+from botocore.exceptions import NoCredentialsError
 import base64
-from werkzeug.utils import secure_filename
+from flask import Flask, request, jsonify
 
 
 # Initialize Flask app and SQLAlchemy
@@ -15,8 +14,11 @@ def create_app():
     CORS(app)
     # Database configuration
 
+
     # app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:root@db:3306/webshop'
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:newpassword@localhost:3306/webshop'
+
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:root@localhost:3306/webshop'
+
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
     return app
@@ -24,12 +26,23 @@ def create_app():
 app = create_app()
 db = SQLAlchemy(app)
 
+# AWS S3 Configuration
+S3_BUCKET = "webshopbackendimagestorage"
+S3_REGION = "eu-north-1"  # e.g., "us-east-1"
+S3_ACCESS_KEY = "Test"
+S3_SECRET_KEY = "Test"
+
+s3_client = boto3.client('s3',
+                         aws_access_key_id=S3_ACCESS_KEY,
+                         aws_secret_access_key=S3_SECRET_KEY,
+                         region_name=S3_REGION)
+
 # Define the Product model
 class Product(db.Model):
     __tablename__ = 'product'  # Explicitly specify the existing table name
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     category = db.Column(db.String(100), nullable=False)
-    image = db.Column(db.LargeBinary, nullable=False)  #Store image as binary data
+    image_url = db.Column(db.String(500), nullable=False)  # Store image URL
     name = db.Column(db.String(100), nullable=False)
     description = db.Column(db.Text, nullable=False)
     price = db.Column(db.Float, nullable=False)
@@ -63,46 +76,49 @@ class Cart(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
-
 @app.route('/products', methods=['POST'])
 def create_product():
-    data = request.form  # Use form data to handle both text and file inputs
-    file = request.files.get('image')  # Get the image file from the request
+    data = request.form
+    file = request.files.get('image')
 
     if not file:
         return jsonify({"error": "Image file is required"}), 400
 
     try:
-        # Read the file's binary data
-        image_data = file.read()
+        # Upload the image to S3
+        file_name = f"products/{file.filename}"
+        s3_client.upload_fileobj(file, S3_BUCKET, file_name, ExtraArgs={"ContentType": file.content_type})
+
+        # Construct the S3 URL
+        image_url = f"https://{S3_BUCKET}.s3.{S3_REGION}.amazonaws.com/{file_name}"
 
         # Create a new product record
         new_product = Product(
             category=data['category'],
-            image=image_data,  # Store binary data in the database
+            image_url=image_url,  # Store the image URL in the database
             name=data['name'],
             description=data['description'],
-            price=float(data['price']),
-            id=int(data['id'])
+            price=float(data['price'])
         )
 
         db.session.add(new_product)
         db.session.commit()
 
-        return jsonify({"message": "Product created successfully", "product": {
-            "category": data['category'],
-            "name": data['name'],
-            "description": data['description'],
-            "price": data['price'],
-            "id": data['id']
-        }}), 201
+        return jsonify({
+            "message": "Product created successfully",
+            "product": {
+                "category": data['category'],
+                "name": data['name'],
+                "description": data['description'],
+                "price": data['price'],
+                "image_url": image_url
+            }
+        }), 201
+    except NoCredentialsError:
+        return jsonify({"error": "AWS credentials not found"}), 500
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 400
-
-import base64
-from flask import Flask, request, jsonify
-from io import BytesIO
 
 @app.route('/products', methods=['GET'])
 def get_products():
@@ -118,13 +134,10 @@ def get_products():
     product_list = []
     for product in products:
         if check_inventory(product.id) > 0:
-            # Convert the binary image data to base64 string
-            image_base64 = base64.b64encode(product.image).decode('utf-8')  # Convert to base64 and decode as UTF-8
-
             product_data = {
                 "id": product.id,
                 "category": product.category,
-                "image": image_base64,  # Return image as base64 string
+                "image_url": product.image_url,  # Return image URL
                 "name": product.name,
                 "description": product.description,
                 "price": product.price
@@ -224,6 +237,8 @@ def add_to_cart():
         return jsonify({"error": str(e)}), 400
 
 
+from flask import jsonify
+
 @app.route('/cart', methods=['GET'])
 def get_cart_items():
     try:
@@ -235,18 +250,12 @@ def get_cart_items():
         for cart_item in cart_items:
             product = cart_item.product  # Get the associated product details
 
-            # Convert image (BLOB) to base64 string if it's stored as BLOB
-            if product.image:
-                image_base64 = base64.b64encode(product.image).decode('utf-8')
-            else:
-                image_base64 = None  # In case there's no image stored
-
             cart_list.append({
                 "id": cart_item.id,
                 "product_id": cart_item.product_id,
                 "name": product.name,
                 "category": product.category,
-                "image": image_base64,  # Return base64-encoded image
+                "image_url": product.image_url,  # Use the image_url directly
                 "description": product.description,
                 "price": product.price,
                 "quantity": cart_item.quantity
@@ -358,21 +367,26 @@ def send_email(subject, body):
 class Order(db.Model):
    __tablename__ = 'orders'  # Explicitly specify the table name
    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-   status = db.Column(db.String(50), nullable=False)
+   name = db.Column(db.String(255), nullable=False)
+   email = db.Column(db.String(255), nullable=False)
+   street = db.Column(db.String(255), nullable=False)
+   city = db.Column(db.String(255), nullable=False)
+   pincode = db.Column(db.String(10), nullable=False)
+   payment_successful = db.Column(db.Boolean, nullable=False)
    payment_method = db.Column(db.String(50), nullable=False)
    total_price = db.Column(db.Float, nullable=False)
-
 
 class OrderDetails(db.Model):
    __tablename__ = 'order_details'
    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
    order_id = db.Column(db.Integer, db.ForeignKey('orders.id'), nullable=False)
    product_id = db.Column(db.Integer, nullable=False)
+   product_name = db.Column(db.String(255), nullable=False)
    quantity = db.Column(db.Integer, nullable=False)
    price_per_unit = db.Column(db.Float, nullable=False)
 
-
    order = db.relationship('Order', backref=db.backref('details', lazy=True))
+
 @app.route('/createorder', methods=['POST'])
 def create_order():
     data = request.json
@@ -380,9 +394,14 @@ def create_order():
     try:
         # Create the main order
         new_order = Order(
-            status=data['status'],
-            payment_method=data['payment_method'],
-            total_price=data['total_price']
+            name=data['name'],
+            email=data['email'],
+            street=data['street'],
+            city=data['city'],
+            pincode=data['pincode'],
+            payment_successful=data['paymentSuccessful'],
+            payment_method=data['paymentMethod'],
+            total_price=data['totalPrice']
         )
         db.session.add(new_order)
         db.session.commit()
@@ -390,22 +409,18 @@ def create_order():
         # Add products to OrderDetails
         products = data['products']
         product_details = []
-        for product_id, quantity in products.items():
-            # Assuming price_per_unit is fetched from the Product table
-            product = Product.query.get(product_id)
-            product_price = product.price
-            product_name = product.name  # Assuming the Product table has a `name` column
-
+        for product in products:
             order_detail = OrderDetails(
                 order_id=new_order.id,
-                product_id=product_id,
-                quantity=quantity,
-                price_per_unit=product_price
+                product_id=product['id'],
+                product_name=product['name'],
+                quantity=product['quantity'],
+                price_per_unit=product['price']
             )
             db.session.add(order_detail)
 
             # Collect product details for the email
-            product_details.append(f"{product_name} (x{quantity})")
+            product_details.append(f"{product['name']} (x{product['quantity']})")
 
         db.session.commit()
 
@@ -420,7 +435,6 @@ def create_order():
         db.session.rollback()
         return jsonify({"error": str(e)}), 400
 
-
 # Read all orders
 @app.route('/orders', methods=['GET'])
 def get_orders():
@@ -428,12 +442,18 @@ def get_orders():
    order_list = [
        {
            "id": order.id,
-           "status": order.status,
+           "name": order.name,
+           "email": order.email,
+           "street": order.street,
+           "city": order.city,
+           "pincode": order.pincode,
+           "payment_successful": order.payment_successful,
            "payment_method": order.payment_method,
            "total_price": order.total_price,
            "details": [
                {
                    "product_id": detail.product_id,
+                   "product_name": detail.product_name,
                    "quantity": detail.quantity,
                    "price_per_unit": detail.price_per_unit
                } for detail in order.details
@@ -441,22 +461,27 @@ def get_orders():
        } for order in orders
    ]
 
-
    return jsonify(order_list), 200
 
-#view an Order
+# View an Order
 @app.route('/orders/<int:id>', methods=['GET'])
 def get_order(id):
     order = Order.query.get_or_404(id)
 
     order_data = {
         "id": order.id,
-        "status": order.status,
+        "name": order.name,
+        "email": order.email,
+        "street": order.street,
+        "city": order.city,
+        "pincode": order.pincode,
+        "payment_successful": order.payment_successful,
         "payment_method": order.payment_method,
         "total_price": order.total_price,
         "details": [
             {
                 "product_id": detail.product_id,
+                "product_name": detail.product_name,
                 "quantity": detail.quantity,
                 "price_per_unit": detail.price_per_unit
             } for detail in order.details
@@ -465,12 +490,12 @@ def get_order(id):
 
     # Send email notification
     subject = "Order Viewed Notification"
-    body = f"Hello,\n\nOrder #{order.id} has been viewed.\n\nStatus: {order.status}\nTotal Price: {order.total_price}\n\nThank you!"
+    body = f"Hello,\n\nOrder #{order.id} has been viewed.\n\nName: {order.name}\nTotal Price: {order.total_price}\n\nThank you!"
     send_email(subject, body)
 
     return jsonify(order_data), 200
 
-#Update Order
+# Update Order
 @app.route('/orders/<int:id>', methods=['PUT'])
 def update_order(id):
     data = request.json
@@ -478,35 +503,35 @@ def update_order(id):
 
     try:
         # Update order fields
-        order.status = data.get('status', order.status)
-        order.payment_method = data.get('payment_method', order.payment_method)
-        order.total_price = data.get('total_price', order.total_price)
+        order.name = data.get('name', order.name)
+        order.email = data.get('email', order.email)
+        order.street = data.get('street', order.street)
+        order.city = data.get('city', order.city)
+        order.pincode = data.get('pincode', order.pincode)
+        order.payment_successful = data.get('paymentSuccessful', order.payment_successful)
+        order.payment_method = data.get('paymentMethod', order.payment_method)
+        order.total_price = data.get('totalPrice', order.total_price)
 
         # Update order details (optional)
         updated_products = []
-        if 'details' in data:
+        if 'products' in data:
             # Clear existing order details
             for detail in order.details:
                 db.session.delete(detail)
 
             # Add new order details
-            for product_id, quantity in data['details'].items():
-                product = Product.query.get(product_id)
-
-                # Validate product existence
-                if not product:
-                    raise ValueError(f"Product with ID {product_id} does not exist.")
-
+            for product in data['products']:
                 order_detail = OrderDetails(
                     order_id=order.id,
-                    product_id=product_id,
-                    quantity=quantity,
-                    price_per_unit=product.price
+                    product_id=product['id'],
+                    product_name=product['name'],
+                    quantity=product['quantity'],
+                    price_per_unit=product['price']
                 )
                 db.session.add(order_detail)
 
                 # Collect product details for email
-                updated_products.append(f"{product.name} (x{quantity})")
+                updated_products.append(f"{product['name']} (x{product['quantity']})")
 
         db.session.commit()
 
@@ -515,7 +540,8 @@ def update_order(id):
         product_list = "\n".join(updated_products)
         body = (
             f"Hello,\n\nOrder #{order.id} has been updated.\n\n"
-            f"Status: {order.status}\n"
+            f"Name: {order.name}\n"
+            f"Email: {order.email}\n"
             f"Payment Method: {order.payment_method}\n"
             f"Total Price: {order.total_price}\n\n"
             f"Updated Products:\n{product_list}\n\n"
@@ -524,12 +550,18 @@ def update_order(id):
         send_email(subject, body)
 
         return jsonify({"message": "Order updated successfully"}), 200
-    except ValueError as ve:
-        db.session.rollback()
-        return jsonify({"error": str(ve)}), 400
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 400
+
+
+
+
+
+
+
+
+
 
 
 #Delete / Cancel Order
@@ -555,7 +587,6 @@ def delete_order(id):
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 400
-
 @app.route('/mock-payment', methods=['POST'])
 def mock_payment():
     data = request.json

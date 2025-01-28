@@ -2,31 +2,35 @@ CREATE DATABASE webshop;
 
 USE webshop;
 
-CREATE TABLE product ( id INT AUTO_INCREMENT PRIMARY KEY,
-category VARCHAR(100) NOT NULL,
- image VARCHAR(255) NOT NULL,
-name VARCHAR(100) NOT NULL,
-description TEXT NOT NULL,
-price FLOAT NOT NULL );
-
-ALTER TABLE product MODIFY COLUMN image LONGBLOB;
+CREATE TABLE product (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    category VARCHAR(100) NOT NULL,
+    image_url VARCHAR(500) NOT NULL,
+    name VARCHAR(100) NOT NULL,
+    description TEXT NOT NULL,
+    price FLOAT NOT NULL
+);
 
 CREATE TABLE orders (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    status VARCHAR(50) NOT NULL,
+    NAME VARCHAR(255) NOT NULL,
+    email VARCHAR(255) NOT NULL,
+    street VARCHAR(255) NOT NULL,
+    city VARCHAR(255) NOT NULL,
+    pincode VARCHAR(10) NOT NULL,
+    payment_successful BOOLEAN NOT NULL,
     payment_method VARCHAR(50) NOT NULL,
-    total_price FLOAT NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    total_price FLOAT NOT NULL
 );
 
 CREATE TABLE order_details (
     id INT AUTO_INCREMENT PRIMARY KEY,
     order_id INT NOT NULL,
     product_id INT NOT NULL,
+    product_name VARCHAR(255) NOT NULL,
     quantity INT NOT NULL,
     price_per_unit FLOAT NOT NULL,
-    FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
-    FOREIGN KEY (product_id) REFERENCES product(id) ON DELETE CASCADE
+    FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
 );
 
 
