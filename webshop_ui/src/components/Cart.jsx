@@ -20,7 +20,7 @@ const Cart = () => {
   useEffect(() => {
     const fetchCart = async () => {
       try {
-        const response = await axios.get("http://127.0.0.1:5000/cart");
+        const response = await axios.get(import.meta.env.VITE_APP_API_CART_URL);
         setCartItems(response.data);
         setLoading(false);
       } catch (err) {
@@ -34,7 +34,7 @@ const Cart = () => {
 
   const removeItem = async (id) => {
     try {
-      await axios.delete(`http://127.0.0.1:5000/cart/${id}`);
+      await axios.delete(import.meta.env.VITE_APP_API_CART_URL+'/'+id);
       setCartItems(cartItems.filter((item) => item.id !== id));
     } catch (err) {
       setError("Failed to remove item");
@@ -43,7 +43,7 @@ const Cart = () => {
 
   const updateQuantity = async (id, newQuantity) => {
     try {
-      await axios.put(`http://127.0.0.1:5000/cart/${id}`, {
+      await axios.put(import.meta.env.VITE_APP_API_CART_URL+'/'+id, {
         quantity: newQuantity,
       });
       setCartItems((prev) =>

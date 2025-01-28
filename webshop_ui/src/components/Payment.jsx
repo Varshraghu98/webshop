@@ -23,7 +23,7 @@ const CheckoutForm = () => {
   const handleCheckout = () => {
     // Fetch cart details to check if it's empty
     axios
-      .get("http://127.0.0.1:5000/cart")
+      .get(import.meta.env.VITE_APP_API_CART_URL)
       .then((response) => {
         const cartItems = response.data;
 
@@ -200,25 +200,44 @@ const CheckoutForm = () => {
         price: item.price,
       })),
     };
-
+  
+    // Show Loading Swal before API calls
+    MySwal.fire({
+      title: "Placing Your Order...",
+      text: "Please wait while we process your order.",
+      allowOutsideClick: false,
+      didOpen: () => {
+        Swal.showLoading(); // Show loading spinner
+      },
+    });
+  
     axios
-      .post("http://127.0.0.1:5000/createorder", orderData)
+      .post(import.meta.env.VITE_APP_API_CREATE_ORDER, orderData)
       .then((response) => {
-        return axios.delete("http://127.0.0.1:5000/cart");
+        return axios.delete(import.meta.env.VITE_APP_API_CART_URL);
       })
       .then(() => {
-        MySwal.fire(
-          "Success",
-          "Order placed successfully. An email is sent to your registered email id!",
-          "success"
-        ).then(() => {
+        // Close Loading Swal and show Success message
+        MySwal.fire({
+          title: "Success",
+          text: "Order placed successfully. An email has been sent to your registered email ID!",
+          icon: "success",
+          confirmButtonText: "OK",
+        }).then(() => {
           window.location.reload();
         });
       })
       .catch((error) => {
-        MySwal.fire("Error", "Failed to place order. Please try again.", "error");
+        // Close Loading Swal and show Error message
+        MySwal.fire({
+          title: "Error",
+          text: "Failed to place order. Please try again.",
+          icon: "error",
+          confirmButtonText: "OK",
+        });
       });
   };
+  
 
   return (
     <Button

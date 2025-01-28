@@ -32,7 +32,7 @@ const ProductDetail = () => {
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const response = await fetch('http://127.0.0.1:5000/products');
+        const response = await fetch(import.meta.env.VITE_APP_API_GET_PRODUCTS_URL);
         if (!response.ok) {
           throw new Error(`Error: ${response.status} ${response.statusText}`);
         }
@@ -57,7 +57,7 @@ const ProductDetail = () => {
 
   const handleAddToCart = async (productId) => {
     try {
-      const response = await fetch('http://127.0.0.1:5000/cart', {
+      const response = await fetch(import.meta.env.VITE_APP_API_CART_URL, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -195,7 +195,7 @@ const ProductDetail = () => {
                 <CardMedia
                   component="img"
                   height="200"
-                  image={`data:image/jpeg;base64,${product.image}`}
+                  image={product.image_url}
                   alt={product.name}
                   sx={{ objectFit: "cover" }}
                 />
