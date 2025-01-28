@@ -348,7 +348,7 @@ from email.mime.text import MIMEText
 SMTP_SERVER = "smtp.gmail.com"
 SMTP_PORT = 587
 USERNAME = "lowtechwebshop@gmail.com"  # Your Gmail address
-PASSWORD = "csou eagd kiah tevi"  # Your Gmail App Password
+PASSWORD = ""  # Your Gmail App Password > csou eagd kiah tevi
 SENDER = "Webshop <lowtechwebshop@gmail.com>"
 
 
