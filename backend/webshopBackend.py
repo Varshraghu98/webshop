@@ -6,6 +6,8 @@ from flask_cors import CORS
 from botocore.exceptions import NoCredentialsError
 import base64
 from flask import Flask, request, jsonify
+import smtplib
+from email.mime.text import MIMEText
 
 
 # Initialize Flask app and SQLAlchemy
@@ -36,6 +38,13 @@ s3_client = boto3.client('s3',
                          aws_access_key_id=S3_ACCESS_KEY,
                          aws_secret_access_key=S3_SECRET_KEY,
                          region_name=S3_REGION)
+
+# SMTP Configuration (Modify these based on your SMTP server)
+SMTP_SERVER = 'smtp.gmail.com'  # Replace with your SMTP server
+SMTP_PORT = 587  # Use 465 for SSL, 587 for TLS
+SMTP_USERNAME = 'lowtechwebshop@gmail.com'  # Replace with your email
+SMTP_PASSWORD = 'test'  # Replace with your app password
+SMTP_DEFAULT_SENDER = 'lowtechwebshop@gmail.com'
 
 # Define the Product model
 class Product(db.Model):
@@ -339,29 +348,28 @@ def check_inventory(product_id):
         # Handle exceptions (e.g., product not found or database errors)
         return str(e)
 
-#Mail Alerts
-import smtplib
-
-# Mailtrap configuration
-MAILTRAP_USERNAME = "a738c74b91fd48"
-MAILTRAP_PASSWORD = "e045f2b6d77ed1"
-MAILTRAP_SERVER = "sandbox.smtp.mailtrap.io"
-MAILTRAP_PORT = 2525
-SENDER = "Test Sender <info@webshop.com>"
-RECEIVER = "Test Receiver <testwebshop123@gmail.com>"
 
 
-# Function to send email
-def send_email(subject, body):
-    message = f"Subject: {subject}\nTo: {RECEIVER}\nFrom: {SENDER}\n\n{body}"
+# Function to send email using smtplib
+def send_email(to_email, subject, body):
     try:
-        with smtplib.SMTP(MAILTRAP_SERVER, MAILTRAP_PORT) as server:
-            server.starttls()
-            server.login(MAILTRAP_USERNAME, MAILTRAP_PASSWORD)
-            server.sendmail(SENDER, RECEIVER, message)
-        print("Email sent successfully.")
+        # Create email message
+        msg = MIMEText(body)
+        msg['Subject'] = subject
+        msg['From'] = SMTP_DEFAULT_SENDER
+        msg['To'] = to_email
+
+        # Connect to SMTP server and send email
+        with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
+            server.starttls()  # Start TLS encryption
+            server.login(SMTP_USERNAME, SMTP_PASSWORD)  # Log in to the SMTP server
+            server.send_message(msg)  # Send the email
+
+        print(f"Email sent successfully to {to_email}")
+        return True
     except Exception as e:
         print(f"Failed to send email: {e}")
+        return False
 
 #orders
 class Order(db.Model):
@@ -387,12 +395,11 @@ class OrderDetails(db.Model):
 
    order = db.relationship('Order', backref=db.backref('details', lazy=True))
 
+# Create Order API
 @app.route('/createorder', methods=['POST'])
 def create_order():
     data = request.json
-
     try:
-        # Create the main order
         new_order = Order(
             name=data['name'],
             email=data['email'],
@@ -418,22 +425,34 @@ def create_order():
                 price_per_unit=product['price']
             )
             db.session.add(order_detail)
-
-            # Collect product details for the email
-            product_details.append(f"{product['name']} (x{product['quantity']})")
+            product_details.append(f"{product['name']} (x{product['quantity']}) - €{product['price']}")
 
         db.session.commit()
 
-        # Send email notification
-        product_list = "\n".join(product_details)  # Format the list of products for the email
-        subject = "Order Created Successfully"
-        body = f"Hello,\n\nYour order has been successfully created with the following products:\n\n{product_list}\n\nThank you for shopping with us!\n\n WEBSHOP:)"
-        send_email(subject, body)
+        # Send confirmation email
+        product_list = "\n".join(product_details)
+        subject = "Order Confirmation"
+        body = f"""
+        Hello {data['name']},
 
-        return jsonify({"message": "Order created successfully", "order_id": new_order.id}), 201
+        Thank you for your order! Here are your order details:
+
+        {product_list}
+
+        Total Price: €{data['totalPrice']}
+
+        We appreciate your business!
+
+        Regards,
+        Webshop Team
+        """
+        send_email(data['email'], subject, body)
+
+        return jsonify({"message": "Order placed successfully", "order_id": new_order.id}), 201
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 400
+
 
 # Read all orders
 @app.route('/orders', methods=['GET'])
@@ -553,15 +572,6 @@ def update_order(id):
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 400
-
-
-
-
-
-
-
-
-
 
 
 #Delete / Cancel Order
