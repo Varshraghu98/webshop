@@ -86,7 +86,7 @@ const Cart = () => {
               <CardMedia
                 component="img"
                 height="200"
-                image={`data:image/jpeg;base64,${item.image}`}
+                image={item.image_url}
                 alt={item.name}
               />
               <CardContent>
