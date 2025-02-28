@@ -23,7 +23,7 @@ CREATE TABLE orders (
     total_price FLOAT NOT NULL
 );
 
-CREATE TABLE order_details (
+CREATE TABLE order_details_old (
     id INT AUTO_INCREMENT PRIMARY KEY,
     order_id INT NOT NULL,
     product_id INT NOT NULL,
@@ -110,4 +110,13 @@ VALUES (2, 2, 2);
 INSERT INTO `webshop`.`Inventory` (`id`, `product_id`, `quantity`)
 VALUES (3, 3, 8);
 
-
+CREATE TABLE order_details (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    order_id INT NOT NULL,
+    product_id INT NOT NULL,
+    product_name VARCHAR(255) NOT NULL,
+    quantity INT NOT NULL,
+    price_per_unit FLOAT NOT NULL,
+    FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
+    FOREIGN KEY (product_id) REFERENCES product(id) ON DELETE CASCADE
+);

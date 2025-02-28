@@ -37,7 +37,8 @@ CREATE TABLE order_details (
     product_name VARCHAR(255) NOT NULL,
     quantity INT NOT NULL,
     price_per_unit FLOAT NOT NULL,
-    FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
+    FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
+    FOREIGN KEY (product_id) REFERENCES product(id) ON DELETE CASCADE
 );
 
 
