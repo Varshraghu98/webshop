@@ -30,7 +30,7 @@ const NavBar = () => {
         </div>
 
          {/* Search Bar */}
-         <div className="navbar-search">
+         {/*<div className="navbar-search">
           <div className="search-container">
             <FaSearch className="search-icon" />
             <input
@@ -39,7 +39,7 @@ const NavBar = () => {
               placeholder="Search for furniture..."
             />
           </div>
-        </div>
+        </div>*/}
 
         {/* Hamburger Menu */}
         <div className="hamburger-menu">

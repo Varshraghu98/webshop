@@ -57,7 +57,7 @@ const ProductDetail = () => {
 
   const handleAddToCart = async (productId) => {
     try {
-      const response = await fetch(import.meta.env.VITE_APP_API_POST_CART_URL, {
+      const response = await fetch(import.meta.env.VITE_APP_API_CART_URL, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -195,7 +195,7 @@ const ProductDetail = () => {
                 <CardMedia
                   component="img"
                   height="200"
-                  image={`data:image/jpeg;base64,${product.image}`}
+                  image={product.image_url}
                   alt={product.name}
                   sx={{ objectFit: "cover" }}
                 />
