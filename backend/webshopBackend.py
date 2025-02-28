@@ -43,7 +43,7 @@ s3_client = boto3.client('s3',
 SMTP_SERVER = 'smtp.gmail.com'  # Replace with your SMTP server
 SMTP_PORT = 587  # Use 465 for SSL, 587 for TLS
 SMTP_USERNAME = 'lowtechwebshop@gmail.com'  # Replace with your email
-SMTP_PASSWORD = 'test'  # Replace with your app password
+SMTP_PASSWORD = 'miju hizq waiq bxzx'  # Replace with app password
 SMTP_DEFAULT_SENDER = 'lowtechwebshop@gmail.com'
 
 # Define the Product model
@@ -388,7 +388,7 @@ class OrderDetails(db.Model):
    __tablename__ = 'order_details'
    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
    order_id = db.Column(db.Integer, db.ForeignKey('orders.id'), nullable=False)
-   product_id = db.Column(db.Integer, nullable=False)
+   product_id = db.Column(db.Integer, db.ForeignKey('product.id'), nullable=False,unique=True)
    product_name = db.Column(db.String(255), nullable=False)
    quantity = db.Column(db.Integer, nullable=False)
    price_per_unit = db.Column(db.Float, nullable=False)
@@ -400,6 +400,7 @@ class OrderDetails(db.Model):
 def create_order():
     data = request.json
     try:
+        # Step 1: Create the order
         new_order = Order(
             name=data['name'],
             email=data['email'],
@@ -413,10 +414,15 @@ def create_order():
         db.session.add(new_order)
         db.session.commit()
 
-        # Add products to OrderDetails
-        products = data['products']
+        # Step 2: Add products to OrderDetails and decrement inventory
         product_details = []
-        for product in products:
+        for product in data['products']:
+            # Deduct inventory
+            inventory = Inventory.query.filter_by(product_id=product['id']).first()
+            if inventory:
+                inventory.quantity -= product['quantity']
+
+            # Create order details
             order_detail = OrderDetails(
                 order_id=new_order.id,
                 product_id=product['id'],
@@ -425,34 +431,35 @@ def create_order():
                 price_per_unit=product['price']
             )
             db.session.add(order_detail)
+
             product_details.append(f"{product['name']} (x{product['quantity']}) - €{product['price']}")
 
         db.session.commit()
 
-        # Send confirmation email
+        # Step 3: Send confirmation email
         product_list = "\n".join(product_details)
         subject = "Order Confirmation"
         body = f"""
-        Hello {data['name']},
+            Hello {data['name']},
 
-        Thank you for your order! Here are your order details:
+            Thank you for your order! Here are your order details:
 
-        {product_list}
+            {product_list}
 
-        Total Price: €{data['totalPrice']}
+            Total Price: €{data['totalPrice']}
 
-        We appreciate your business!
+            We appreciate your business!
 
-        Regards,
-        Webshop Team
-        """
+            Regards,
+            Webshop Team
+            """
         send_email(data['email'], subject, body)
 
         return jsonify({"message": "Order placed successfully", "order_id": new_order.id}), 201
+
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 400
-
 
 # Read all orders
 @app.route('/orders', methods=['GET'])
