@@ -194,7 +194,7 @@ const CheckoutForm = () => {
       paymentMethod: paymentMethod,
       totalPrice: totalPrice,
       products: cartItems.map((item) => ({
-        id: item.id,
+        id: item.product_id,
         name: item.name,
         quantity: item.quantity,
         price: item.price,
