@@ -395,7 +395,7 @@ class OrderDetails(db.Model):
 
    order = db.relationship('Order', backref=db.backref('details', lazy=True))
 
-# Create Order API
+
 @app.route('/createorder', methods=['POST'])
 def create_order():
     data = request.json
@@ -416,11 +416,19 @@ def create_order():
 
         # Step 2: Add products to OrderDetails and decrement inventory
         product_details = []
+        low_inventory_products = []  # List to track products with low inventory
+
         for product in data['products']:
             # Deduct inventory
             inventory = Inventory.query.filter_by(product_id=product['id']).first()
             if inventory:
                 inventory.quantity -= product['quantity']
+
+                # Check for low inventory (less than 3)
+                if inventory.quantity < 3:
+                    low_inventory_products.append(
+                        f"Product ID: {product['id']}, Name: {product['name']}, Remaining: {inventory.quantity}"
+                    )
 
             # Create order details
             order_detail = OrderDetails(
@@ -436,7 +444,7 @@ def create_order():
 
         db.session.commit()
 
-        # Step 3: Send confirmation email
+        # Step 3: Send confirmation email to the customer
         product_list = "\n".join(product_details)
         subject = "Order Confirmation"
         body = f"""
@@ -454,6 +462,22 @@ def create_order():
             Webshop Team
             """
         send_email(data['email'], subject, body)
+
+        # Step 4: Send low inventory alert email
+        if low_inventory_products:
+            low_inventory_list = "\n".join(low_inventory_products)
+            low_inventory_subject = "Low Inventory Alert"
+            low_inventory_body = f"""
+                Alert! The following products are running low in inventory:
+
+                {low_inventory_list}
+
+                Please restock these items to avoid stockouts.
+
+                Regards,
+                Inventory Management Team
+                """
+            send_email("testscs829@gmail.com", low_inventory_subject, low_inventory_body)
 
         return jsonify({"message": "Order placed successfully", "order_id": new_order.id}), 201
 
