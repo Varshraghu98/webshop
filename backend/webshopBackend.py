@@ -19,7 +19,7 @@ def create_app():
 
     # app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:root@db:3306/webshop'
 
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:root@localhost:3306/webshop'
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:newpassword@localhost:3306/webshop'
 
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
@@ -217,6 +217,31 @@ def get_inventory():
     ]
 
     return jsonify(inventory_list), 200
+
+# API Routes
+@app.route('/inventory', methods=['POST'])
+def create_inventory():
+    """Create inventory entry for a product."""
+    data = request.json
+    product_id = data.get('product_id')
+    quantity = data.get('quantity', 0)
+
+    # Check if product exists
+    product = Product.query.get(product_id)
+    if not product:
+        return jsonify({'error': 'Product not found'}), 404
+
+    # Check if inventory entry already exists
+    existing_inventory = Inventory.query.filter_by(product_id=product_id).first()
+    if existing_inventory:
+        return jsonify({'error': 'Inventory entry already exists'}), 400
+
+    # Create new inventory entry
+    new_inventory = Inventory(product_id=product_id, quantity=quantity)
+    db.session.add(new_inventory)
+    db.session.commit()
+
+    return jsonify({'message': 'Inventory entry created successfully', 'inventory_id': new_inventory.id}), 201
 
 @app.route('/cart', methods=['POST'])
 def add_to_cart():
