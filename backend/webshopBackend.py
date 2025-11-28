@@ -1,4 +1,5 @@
 from datetime import datetime
+import os
 
 import boto3
 from flask_sqlalchemy import SQLAlchemy
@@ -19,7 +20,11 @@ def create_app():
 
     # app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:root@db:3306/webshop'
 
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:newpassword@localhost:3306/webshop'
+    database_uri = os.getenv(
+        "DATABASE_URL",
+        "mysql+pymysql://root:newpassword@localhost:3306/webshop",
+    )
+    app.config['SQLALCHEMY_DATABASE_URI'] = database_uri
 
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
@@ -672,4 +677,4 @@ def mock_payment():
     return jsonify({"success": True, "message": "Payment processed successfully!"}), 200
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(host="0.0.0.0", port=5000, debug=True)

@@ -50,6 +50,20 @@ This repository hosts the UI and backend components for the Webshop project.
 
    The backend server should now be running on `http://localhost:5000/`.
 
+#### Backend in Docker
+
+You can run the backend without a local Python install:
+
+```bash
+# from repo root
+docker build -t webshop-backend -f backend/Dockerfile .
+docker run -p 5000:5000 \
+  -e DATABASE_URL="mysql+pymysql://root:newpassword@host.docker.internal:3306/webshop" \
+  webshop-backend
+```
+
+Update `DATABASE_URL` to point at your MySQL instance (the example uses macOS/Windows `host.docker.internal` to reach a host DB).
+
 ### UI Setup
 
 1. **Navigate to the UI Directory**:
@@ -184,4 +198,3 @@ The database schema isn't automatically created, execute the SQL scripts located
 ## Contributing
 
 Contributions are welcome! Please open an issue or submit a pull request for any improvements or bug fixes.
-
